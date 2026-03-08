@@ -34,6 +34,11 @@ function App() {
                             <Bursar/>
                         </ProtectedRoute>
                             }/>
+                    <Route path="/TeacherPortal/*" element={
+                        <ProtectedRoute allowedRoles={['teacher']}>
+                            <TeacherSidebar/>
+                        </ProtectedRoute>
+                            }/>
                     {/* <Route path="/HrPortal/*" element={
                         <ProtectedRoute allowedRoles={['hr_manager']}>
                             <Hr/>

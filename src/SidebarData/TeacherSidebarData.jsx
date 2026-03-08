@@ -8,7 +8,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import HelpIcon from '@mui/icons-material/Help';
 import LogoutIcon from '@mui/icons-material/Logout';
 
-export const TeacherSidebarData = [
+const TeacherSidebarData = [
   
   {
     title: "Dashboard",
