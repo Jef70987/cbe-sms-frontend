@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom"
-import TeacherSidebar from "../sidebars/TeacherSidebar";
+import TeacherSidebar from "../../sidebars/TeacherSidebar";
 
 import Login from "../Authentication/Login";
 import TeacherDashboard from "./TeacherDashboard";

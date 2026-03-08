@@ -76,11 +76,8 @@ export const AuthProvider = ({ children }) => {
           body: JSON.stringify({ email, password }),
         });
         
-        console.log('Login response status:', response.status);
-        console.log('Login response headers:', response.headers);
         
         const text = await response.text();
-        console.log('Raw response:', text);
         
         let data;
         try {
@@ -142,7 +139,7 @@ export const AuthProvider = ({ children }) => {
         
       } catch (err) {
         
-        const errorMessage = err.message || 'Login failed. Please try again.';
+        const errorMessage = 'Login failed. Check your network connection and try again.';
         setError(errorMessage);
         return { success: false, error: errorMessage };
       }

@@ -11,7 +11,7 @@ import Settings from "./Settings";
 import Login from "../Authentication/Login";
 
 
-const Finance = () => {
+const Accountant = () => {
     return(
         <div style={{ display: "flex", height: "100vh", overflow: "hidden",gap:"2px" }}>
             {/* Sidebar */}
@@ -44,4 +44,4 @@ const Finance = () => {
     );
 };
 
-export default Finance;
+export default Accountant;

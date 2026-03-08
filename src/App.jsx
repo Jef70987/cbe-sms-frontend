@@ -1,15 +1,14 @@
 import React from "react";
 import { HashRouter as Router , Routes ,Route } from "react-router-dom";
-import Finance from "./components/FinancePortal/Finance";
+
 import Bursar from "./components/BursarPortal/Bursar";
 import Login from "./components/Authentication/Login";
 import Register from "./components/RegisterPortal/Register";
-// import Hr from "./components/HrPortal/Hr";
-
+import Hr from "./components/HrPortal/Hr";
 import { AuthProvider } from "./components/Authentication/AuthContext";
 import ProtectedRoute from "./components/Authentication/ProtectedRoute";
-
-// import ProtectedRoute from "./components/Authentication/Layout/ProtectedRoute";
+import Accountant from "./components/AccountantPortal/Finance";
+import Teacher from "./components/TeacherPortal/TeacherMain";
 function App() {
     return(
         <AuthProvider>
@@ -26,7 +25,7 @@ function App() {
                         }/>
                     <Route path="/FinancePortal/*" element={
                         <ProtectedRoute allowedRoles={['accountant']}>
-                            <Finance/>
+                            <Accountant/>
                         </ProtectedRoute>
                             }/>
                     <Route path="/BursarPortal/*" element={
@@ -36,14 +35,14 @@ function App() {
                             }/>
                     <Route path="/TeacherPortal/*" element={
                         <ProtectedRoute allowedRoles={['teacher']}>
-                            <TeacherSidebar/>
+                            <Teacher/>
                         </ProtectedRoute>
                             }/>
-                    {/* <Route path="/HrPortal/*" element={
+                    <Route path="/HrPortal/*" element={
                         <ProtectedRoute allowedRoles={['hr_manager']}>
                             <Hr/>
                         </ProtectedRoute>
-                            }/> */}
+                            }/>
 
                     <Route path="*" element={<Login/>}/>
                 </Routes>

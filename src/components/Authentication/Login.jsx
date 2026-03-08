@@ -73,8 +73,8 @@ const Login = () => {
           className="absolute inset-0 w-full h-full object-cover"
         />
         
-        {/* Green Overlay Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-green-900/95 via-green-800/90 to-green-900/95"></div>
+        {/* Blue Overlay Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-700/95 via-blue-600/90 to-blue-800/95"></div>
         
         {/* Decorative Pattern */}
         <div className="absolute inset-0 opacity-10">
@@ -85,7 +85,7 @@ const Login = () => {
         </div>
         
         {/* Curved border effect - hidden on mobile */}
-        <div className="hidden lg:block absolute right-0 top-0 h-full w-32 bg-white" 
+        <div className="hidden lg:block absolute right-0 top-0 h-full w-32 bg-red-800" 
              style={{ 
                clipPath: 'polygon(100% 0, 0% 100%, 100% 100%)',
                opacity: '0.95'
@@ -93,21 +93,12 @@ const Login = () => {
         </div>
         
         <div className="relative z-10 flex flex-col items-center justify-center text-white p-6 lg:p-12 w-full h-full">
-          {/* Mobile Logo - Only visible on mobile */}
-          <div className="lg:hidden mb-6">
-            <div className="mx-auto h-20 w-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border-2 border-white/30 overflow-hidden">
-              <img 
-                src="/logo.jpeg" 
-                alt="School Logo" 
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
+
 
           {/* Header */}
           <div className="mb-8 lg:mb-12 text-center">
             <h1 className="text-2xl lg:text-3xl font-bold mb-3 tracking-tight">
-              CBE ANALYTICS AND MANAGEMENT SYSTEM
+              JOINT ADVANCED WEB ANALYTICS AND BEHAVORIAL UNIT
             </h1>
             <p className="text-base lg:text-xl font-light text-green-200">
               Competency Based Education
@@ -118,7 +109,7 @@ const Login = () => {
           </div>
 
           {/* CBE Description */}
-          <div className="mb-8 text-center max-w-lg">
+          <div className="mb-18 text-center max-w-lg">
             <p className="text-sm lg:text-base text-green-100 leading-relaxed">
               The Competency-Based Education (CBE) curriculum focuses on students mastering 
               specific skills and competencies at their own pace. Our approach ensures every 
@@ -175,7 +166,7 @@ const Login = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4 lg:p-8">
         <div className="max-w-md w-full">
           {/* Login Card */}
-          <div className="bg-white rounded-2xl shadow-lg p-8 border border-green-600 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-blue-600 animate-fadeIn">
             {/* Logo and Title */}
             <div className="text-center mb-6">
               <div className="mx-auto h-20 w-20 mb-4">
@@ -185,13 +176,13 @@ const Login = () => {
                   className="w-full h-full object-cover rounded-lg"
                 />
               </div>
-              <h2 className="text-xl font-semibold text-gray-800">{schoolName}</h2>
-              <p className="text-xs text-gray-500 mt-1">STRIVING FOR EXCELLENCE</p>
+              <h2 className="text-xl font-semibold text-blue-800">{schoolName}</h2>
+              <p className="text-xs text-red-500 mt-1">STRIVING FOR EXCELLENCE</p>
             </div>
 
             {/* Welcome Text */}
             <div className="text-center mb-6">
-              <p className="text-sm text-green-600">Welcome back. Enter your login credentials.</p>
+              <p className="text-sm font-bold text-gray-700">Welcome back. Enter your login credentials.</p>
             </div>
             
             {/* Error Message */}
@@ -249,7 +240,7 @@ const Login = () => {
               </div>
 
               <div className="flex items-center justify-end">
-                <a href="#" className="text-sm text-green-600 hover:text-green-700">
+                <a href="#" className="text-sm text-blue-600 hover:text-blue-700">
                   Forgot password?
                 </a>
               </div>
@@ -257,7 +248,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-green-600 text-white py-2.5 px-4 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-200 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-200 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? "Signing in..." : "Sign in"}
               </button>
@@ -265,10 +256,10 @@ const Login = () => {
 
             {/* Footer */}
             <div className="mt-6 pt-4 border-t border-gray-100 text-center">
-              <p className="text-xs text-gray-400">
-                © {new Date().getFullYear()} {schoolName}. All rights reserved.
+              <p className="text-xs text-gray-500">
+                © {new Date().getFullYear()} jawabu. All rights reserved.
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 Powered by Syntelsafe
               </p>
             </div>
