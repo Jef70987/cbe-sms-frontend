@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom"
-import FinanceSidebar from "../../sidebars/FinanceSidebar";
+import AccSidebar from "../../sidebars/FinanceSidebar";
 import Dashboard from "./Dashboard";
 import FeeManagement from "./FeeManagement";
 import PayrollManagement from "./PayrollManagement";
@@ -16,7 +16,7 @@ const Finance = () => {
         <div style={{ display: "flex", height: "100vh", overflow: "hidden",gap:"2px" }}>
             {/* Sidebar */}
             <div style={{ flexShrink: 0 }}>
-                <FinanceSidebar/>
+                <AccSidebar/>
             </div>
             
             {/* Main Content Area */}

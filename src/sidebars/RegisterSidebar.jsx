@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import RegisterSidebarData from '../../SidebarData/RegisterSidebarData';
+import RegisterSidebarData from '../SidebarData/RegisterSidebarData';
 import { useNavigate } from 'react-router-dom';
 
-function BursarSidebar() {
+function RegisterSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [openDropdown, setOpenDropdown] = useState(null);
   const navigate = useNavigate();
@@ -227,4 +227,4 @@ function BursarSidebar() {
   );
 }
 
-export default BursarSidebar;
+export default RegisterSidebar;

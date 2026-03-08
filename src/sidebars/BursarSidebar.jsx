@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import BursarData  from '../../SidebarData/BursarSidebarData';
+import BursarData  from '../SidebarData/BursarSidebarData';
 import { useNavigate } from 'react-router-dom';
 
 function BursarSidebar() {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import  HrData  from '../../SidebarData/HrSidebarData';
+import  HrData  from '../SidebarData/HrSidebarData';
 import { useNavigate } from 'react-router-dom';
 
 function HrSidebar() {

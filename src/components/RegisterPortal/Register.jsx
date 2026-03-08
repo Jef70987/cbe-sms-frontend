@@ -1,6 +1,6 @@
 import React from "react"
 import { Routes, Route } from "react-router-dom";
-import AdminSidebar from "../../sidebars/RegisterSidebar";
+import RegisterSidebar from "../../sidebars/RegisterSidebar";
 import Dashboard from "./Dashboard";
 import Admission from "./Admission";
 import Login from "../Authentication/Login";
@@ -13,7 +13,7 @@ const Register  = () => {
         <div style={{ display: "flex", height: "100vh", overflow: "hidden",gap:"2px" }}>
             {/* Sidebar */}
             <div style={{ flexShrink: 0 }}>
-                <AdminSidebar/>
+                <RegisterSidebar/>
             </div>
             
             {/* Main Content Area */}

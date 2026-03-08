@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import FinanceSidebarData from '../../SidebarData/FinanceSidebarData';
+import FinanceSidebarData from '../SidebarData/FinanceSidebarData';
 import { useNavigate } from 'react-router-dom';
 
-function Sidebar() {
+function AccSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [openDropdown, setOpenDropdown] = useState(null);
   const navigate = useNavigate();
@@ -224,4 +224,4 @@ function Sidebar() {
   );
 }
 
-export default Sidebar;
+export default AccSidebar;
