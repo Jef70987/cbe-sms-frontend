@@ -4,7 +4,7 @@ import {
   BarChart3, AlertCircle, X, Loader2, Info,
   Edit2, Trash2, Eye
 } from 'lucide-react';
-import { useAuth } from '../Authentication/AuthContext'; // Adjust the import path based on your structure
+import { useAuth } from '../Authentication/AuthContext'; 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 

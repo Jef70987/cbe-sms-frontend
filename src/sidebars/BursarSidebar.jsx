@@ -54,8 +54,8 @@ function BursarSidebar() {
       {/* Sidebar */}
       <div 
         className={`
-          h-screen bg-gradient-to-b from-red-700 to-red-800 
-          shadow-2xl border-r border-red-600 transition-all duration-300 ease-in-out z-50
+          h-screen bg-gradient-to-b from-blue-700 to-blue-800 
+          shadow-2xl border-r border-blue-600 transition-all duration-300 ease-in-out z-50
           ${isCollapsed ? 'w-20' : 'w-64'}
           /* Mobile styles */
           fixed lg:relative top-0 left-0
@@ -63,7 +63,7 @@ function BursarSidebar() {
         `}
       >
         {/* Header Section */}
-        <div className="flex flex-col items-center p-4 border-b border-blue-700">
+        <div className="flex flex-col items-center p-4 border-b border-white">
           {/* School Logo and Name */}
           <div className="flex items-center space-x-3 w-full">
             <img 
@@ -73,7 +73,7 @@ function BursarSidebar() {
             />
             {!isCollapsed && (
               <div className="flex flex-col">
-                <h1 className="text-white font-bold text-lg leading-tight">KOGWENO</h1>
+                <h1 className="text-white font-bold text-lg leading-tight">JAWABU</h1>
                 <h2 className="text-blue-200 text-xs font-semibold">SCHOOL</h2>
               </div>
             )}

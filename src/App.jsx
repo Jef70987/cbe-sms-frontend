@@ -19,9 +19,9 @@ function App() {
 
                     {/* wrapping all portals with ProtectedRoute */}
                     <Route path="/RegisterPortal/*" element={
-                            <ProtectedRoute allowedRoles={['registrar']}>
+                            // <ProtectedRoute allowedRoles={['registrar']}>
                                 <Register/>
-                            </ProtectedRoute>
+                            // </ProtectedRoute>
                         }/>
                     <Route path="/FinancePortal/*" element={
                         <ProtectedRoute allowedRoles={['accountant']}>

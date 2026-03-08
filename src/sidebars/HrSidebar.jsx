@@ -63,7 +63,7 @@ function HrSidebar() {
         `}
       >
         {/* Header Section */}
-        <div className="flex flex-col items-center p-4 border-b border-blue-700">
+        <div className="flex flex-col items-center p-4 border-b border-white">
           {/* School Logo and Name */}
           <div className="flex items-center space-x-3 w-full">
             <img 
@@ -73,8 +73,8 @@ function HrSidebar() {
             />
             {!isCollapsed && (
               <div className="flex flex-col">
-                <h1 className="text-white font-bold text-lg leading-tight">KOGWENO</h1>
-                <h2 className="text-blue-200 text-xs font-semibold">PRI SCHOOL</h2>
+                <h1 className="text-white font-bold text-lg leading-tight">JAWABU</h1>
+                <h2 className="text-blue-200 text-xs font-semibold">SCHOOL</h2>
               </div>
             )}
           </div>
