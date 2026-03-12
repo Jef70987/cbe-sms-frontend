@@ -31,6 +31,11 @@ const TeacherSidebarData = [
     link: "/TeacherPortal/Portfolio"
   },
   {
+    title: "Assessment",
+    icon: <DescriptionIcon />,
+    link: "/TeacherPortal/AssessmentManager"
+  },
+  {
     title: "Termly Summary",
     icon: <ReceiptIcon />,
     link: "/TeacherPortal/TermlySummary"

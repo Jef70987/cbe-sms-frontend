@@ -15,8 +15,8 @@ import SmartToyIcon from '@mui/icons-material/SmartToy';
 import LogoutIcon from '@mui/icons-material/Logout';
 import HomeWorkIcon from '@mui/icons-material/HomeWork';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
-// eslint-disable-next-line react-refresh/only-export-components
-export const SidebarData = [
+
+const StudentSidebarData = [
   
   {
     title: "Dashboard",
@@ -83,4 +83,4 @@ export const SidebarData = [
   },
 ];
 
-export default SidebarData;
+export default StudentSidebarData;

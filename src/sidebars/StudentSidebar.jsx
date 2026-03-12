@@ -1,8 +1,9 @@
-import React, { useState ,useEffect} from 'react';
-import TeacherSidebarData from '../SidebarData/TeacherSidebarData';
+// UserSidebar.jsx
+import React, { useState, useEffect } from 'react';
+import StudentSidebarData from '../SidebarData/StudentSidebarData';
 import { useNavigate } from 'react-router-dom';
 
-function TeacherSidebar() {
+function StudentSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -55,7 +56,7 @@ function TeacherSidebar() {
       {isMobile && (
         <div className="fixed bottom-0 left-0 right-0 bg-blue-800 shadow-2xl z-50 lg:hidden">
           <div className="flex justify-around items-center h-16 px-2 overflow-x-auto">
-            {TeacherSidebarData.slice(0, 15).map((val, key) => (
+            {StudentSidebarData.slice(0, 15).map((val, key) => (
               <button
                 key={key}
                 onClick={() => handleNavigation(val.link)}
@@ -162,7 +163,7 @@ function TeacherSidebar() {
               <button 
                 onClick={toggleSidebar}
                 className={`
-                  bg-red-600/50 hover:bg-red-600 backdrop-blur-sm text-white rounded-full p-2 
+                  bg-blue-600/50 hover:bg-blue-600 backdrop-blur-sm text-white rounded-full p-2 
                   shadow-lg border-2 border-blue-400/40 transition-all duration-300 hover:scale-110 hover:rotate-180
                   ${isCollapsed ? 'absolute -right-3 top-5' : ''}
                 `}
@@ -184,7 +185,7 @@ function TeacherSidebar() {
         {/* Navigation Items - Scrollable */}
         <nav className="relative z-10 flex-1 overflow-y-auto py-6 px-3 scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-blue-900/30">
           <ul className="space-y-2">
-            {TeacherSidebarData.map((val, key) => (
+            {StudentSidebarData.map((val, key) => (
               <li key={key} className="relative">
                 {/* Main Navigation Item */}
                 <div
@@ -354,4 +355,4 @@ function TeacherSidebar() {
   );
 }
 
-export default TeacherSidebar;
+export default StudentSidebar;
