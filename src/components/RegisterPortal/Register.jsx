@@ -4,9 +4,11 @@ import RegisterSidebar from "../../sidebars/RegisterSidebar";
 import Dashboard from "./Dashboard";
 import Admission from "./Admission";
 import Login from "../Authentication/Login";
+import Logout from "../Authentication/Logout";
 import ClassManagement from "./ClassMngmnt";
 import StudentManagement from "./StudentMngmnt";
-import Academic from "./Academic";
+import AcademicManagement from "./Academic";
+import ExamAndReportManagement from "./ExamMngmnt";
 
 const Register  = () => {
     return(
@@ -31,7 +33,11 @@ const Register  = () => {
                     <Route path="/Admission" element={<Admission/>}/>
                     <Route path="/StudentManagement" element={<StudentManagement/>}/>
                     <Route path="/Class" element={<ClassManagement/>}/>
-                    <Route path="/academic" element={<Academic/>}/>
+                    <Route path="/Academic" element={<AcademicManagement/>}/>
+                    <Route path="/ExamAndReportManagement" element={<ExamAndReportManagement/>}/>
+                    <Route path="/Logout" element={<Logout/>}/>
+                    
+                    <Route path="*" element={<Logout/>}/>
                 </Routes>
                
             </div>

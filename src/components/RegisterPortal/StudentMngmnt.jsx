@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import * as XLSX from 'xlsx';
+import { useAuth } from '../Authentication/AuthContext';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 function StudentManagement() {
+  const { user, getAuthHeaders, isAuthenticated } = useAuth();
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -12,12 +13,11 @@ function StudentManagement() {
     students: true,
     classes: true
   });
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [notifications, setNotifications] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
+  const [viewMode, setViewMode] = useState('list');
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -26,17 +26,70 @@ function StudentManagement() {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferData, setTransferData] = useState({
     targetClassId: '',
-    // academicYear: new Date().getFullYear() + '-' + (new Date().getFullYear() + 1),
-    // term: 'Term 1'
+  });
+  const [selectedTransferStudents, setSelectedTransferStudents] = useState([]);
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    activeStudents: 0,
+    maleStudents: 0,
+    femaleStudents: 0,
+    archivedStudents: 0,
+    studentsByClass: {}
   });
 
-  // Form for transferring students
-  const [selectedTransferStudents, setSelectedTransferStudents] = useState([]);
+  // Notification component
+  const Notification = ({ type, message, onClose }) => {
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }, [onClose]);
+
+    const getStyles = () => {
+      switch (type) {
+        case 'success':
+          return 'bg-green-50 border-green-200 text-green-800';
+        case 'error':
+          return 'bg-red-50 border-red-200 text-red-800';
+        case 'warning':
+          return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+        default:
+          return 'bg-blue-50 border-blue-200 text-blue-800';
+      }
+    };
+
+    return (
+      <div className={`fixed top-4 right-4 z-50 max-w-md w-full rounded-lg border p-4 shadow-lg ${getStyles()}`}>
+        <div className="flex items-start">
+          <div className="flex-1">
+            <p className="text-sm">{message}</p>
+          </div>
+          <button onClick={onClose} className="ml-4">
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const addNotification = (type, message) => {
+    const id = Date.now();
+    setNotifications(prev => [...prev, { id, type, message }]);
+  };
+
+  const removeNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
   // Fetch data on component mount
   useEffect(() => {
+    if (!isAuthenticated) {
+      addNotification('error', 'Please login to access student management');
+      return;
+    }
     fetchData();
-  }, []);
+  }, [isAuthenticated]);
 
   // Filter students when search term, class, or status changes
   useEffect(() => {
@@ -46,27 +99,65 @@ function StudentManagement() {
   const fetchData = async () => {
     try {
       setLoading({ students: true, classes: true });
-      setError(null);
 
       // Fetch students
-      const studentsRes = await axios.get(`${API_BASE_URL}/admissions/students`);
-      if (studentsRes.data.success) {
-        setStudents(studentsRes.data.data);
-        setFilteredStudents(studentsRes.data.data);
+      const studentsRes = await fetch(`${API_BASE_URL}/api/registrar/students/`, {
+        headers: getAuthHeaders()
+      });
+      const studentsData = await studentsRes.json();
+      if (studentsData.success) {
+        setStudents(studentsData.data);
+        setFilteredStudents(studentsData.data);
+        calculateStats(studentsData.data);
       }
 
       // Fetch classes
-      const classesRes = await axios.get(`${API_BASE_URL}/classes`);
-      if (classesRes.data.success) {
-        setClasses(classesRes.data.data);
+      const classesRes = await fetch(`${API_BASE_URL}/api/registrar/classes/`, {
+        headers: getAuthHeaders()
+      });
+      const classesData = await classesRes.json();
+      if (classesData.success) {
+        setClasses(classesData.data);
       }
 
     } catch (error) {
       console.error('Error fetching data:', error);
-      setError('Failed to connect to backend server. Please ensure the server is running.');
+      addNotification('error', 'Failed to connect to backend server');
     } finally {
       setLoading({ students: false, classes: false });
     }
+  };
+
+  const calculateStats = (studentsData) => {
+    const totalStudents = studentsData.length;
+    const activeStudents = studentsData.filter(s => s.status === 'Active').length;
+    const maleStudents = studentsData.filter(s => s.gender === 'Male').length;
+    const femaleStudents = studentsData.filter(s => s.gender === 'Female').length;
+    const archivedStudents = studentsData.filter(s => s.archived).length;
+
+    // Count by class
+    const studentsByClass = {};
+    studentsData.forEach(student => {
+      const classId = student.current_class;
+      if (classId) {
+        if (!studentsByClass[classId]) {
+          studentsByClass[classId] = {
+            count: 0,
+            className: classes.find(c => c.id == classId)?.class_name || 'Unknown'
+          };
+        }
+        studentsByClass[classId].count++;
+      }
+    });
+
+    setStats({
+      totalStudents,
+      activeStudents,
+      maleStudents,
+      femaleStudents,
+      archivedStudents,
+      studentsByClass
+    });
   };
 
   const filterStudents = () => {
@@ -86,12 +177,12 @@ function StudentManagement() {
 
     // Apply class filter
     if (selectedClass !== 'all') {
-      filtered = filtered.filter(student => student.current_class_id == selectedClass);
+      filtered = filtered.filter(student => student.current_class == selectedClass);
     }
 
     // Apply status filter
     if (selectedStatus !== 'all') {
-      filtered = filtered.filter(student => student.status === selectedStatus);
+      filtered = filtered.filter(student => student.status.toLowerCase() === selectedStatus.toLowerCase());
     }
 
     setFilteredStudents(filtered);
@@ -110,14 +201,15 @@ function StudentManagement() {
     setSelectedStudent(student);
     setEditFormData({
       first_name: student.first_name,
+      middle_name: student.middle_name || '',
       last_name: student.last_name,
       gender: student.gender,
       date_of_birth: student.date_of_birth,
       phone: student.phone,
-      email: student.email,
+      email: student.email || '',
       address: student.address,
-      current_class_id: student.current_class_id,
-      current_section: student.current_section,
+      current_class: student.current_class,
+      current_section: student.current_section || '',
       roll_number: student.roll_number,
       status: student.status,
       guardian_name: student.guardian_name,
@@ -140,21 +232,27 @@ function StudentManagement() {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.put(
-        `${API_BASE_URL}/admissions/students/${selectedStudent.id}`,
-        editFormData
+      const response = await fetch(
+        `${API_BASE_URL}/api/registrar/students/update/${selectedStudent.id}/`,
+        {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(editFormData)
+        }
       );
       
-      if (response.data.success) {
-        setSuccessMessage(`✅ Student ${response.data.data.first_name} ${response.data.data.last_name} updated successfully!`);
+      const data = await response.json();
+      
+      if (data.success) {
+        addNotification('success', `Student ${data.data.first_name} ${data.data.last_name} updated successfully!`);
         await fetchData();
         setShowEditModal(false);
-        
-        setTimeout(() => setSuccessMessage(''), 5000);
+      } else {
+        addNotification('error', data.error || 'Failed to update student');
       }
     } catch (error) {
       console.error('Error updating student:', error);
-      alert('Failed to update student. Please try again.');
+      addNotification('error', 'Failed to update student. Please try again.');
     }
   };
 
@@ -164,36 +262,51 @@ function StudentManagement() {
     }
 
     try {
-      const response = await axios.put(
-        `${API_BASE_URL}/admissions/students/${studentId}`,
-        { status: newStatus }
+      const response = await fetch(
+        `${API_BASE_URL}/api/registrar/students/update/${studentId}/`,
+        {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ status: newStatus })
+        }
       );
       
-      if (response.data.success) {
-        alert('✅ Status updated successfully!');
+      const data = await response.json();
+      
+      if (data.success) {
+        addNotification('success', 'Status updated successfully!');
         await fetchData();
+      } else {
+        addNotification('error', data.error || 'Failed to update status');
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      alert('Failed to update status.');
+      addNotification('error', 'Failed to update status.');
     }
   };
 
   const handleArchiveStudent = async (studentId) => {
-    if (!window.confirm('Are you sure you sure of this action. it can be reversed')) {
+    if (!window.confirm('Are you sure you want to archive this student? This action can be reversed.')) {
       return;
     }
 
     try {
-      const response = await axios.delete(`${API_BASE_URL}/admissions/students/${studentId}`);
+      const response = await fetch(`${API_BASE_URL}/api/registrar/students/delete/${studentId}/`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
       
-      if (response.data.success) {
-        alert('✅ Student archived successfully!');
+      const data = await response.json();
+      
+      if (data.success) {
+        addNotification('success', 'Student archived successfully!');
         await fetchData();
+      } else {
+        addNotification('error', data.error || 'Failed to archive student');
       }
     } catch (error) {
       console.error('Error archiving student:', error);
-      alert('Failed to archive student.');
+      addNotification('error', 'Failed to archive student.');
     }
   };
 
@@ -207,7 +320,7 @@ function StudentManagement() {
         'Full Name': `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.trim(),
         'Gender': student.gender,
         'Date of Birth': student.date_of_birth,
-        'Class': classes.find(c => c.id == student.current_class_id)?.class_name || 'Not assigned',
+        'Class': classes.find(c => c.id == student.current_class)?.class_name || 'Not assigned',
         'Section': student.current_section || 'N/A',
         'Roll Number': student.roll_number || 'N/A',
         'Phone': student.phone || 'N/A',
@@ -228,22 +341,11 @@ function StudentManagement() {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
       
-      // Auto-size columns
-      const maxWidth = exportData.reduce((w, r) => Math.max(w, r['Full Name']?.length || 0), 10);
-      const wscols = [
-        {wch: 15}, {wch: Math.min(maxWidth, 30)}, {wch: 10}, {wch: 12},
-        {wch: 20}, {wch: 10}, {wch: 12}, {wch: 15}, {wch: 25},
-        {wch: 20}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 10},
-        {wch: 12}, {wch: 30}, {wch: 15}, {wch: 20}, {wch: 15}
-      ];
-      worksheet['!cols'] = wscols;
-      
       XLSX.writeFile(workbook, `students_export_${new Date().toISOString().split('T')[0]}.xlsx`);
-      setSuccessMessage(`✅ Exported ${exportData.length} students to Excel`);
-      setTimeout(() => setSuccessMessage(''), 5000);
+      addNotification('success', `Exported ${exportData.length} students to Excel`);
     } catch (error) {
       console.error('Error exporting to Excel:', error);
-      alert('Failed to export data. Please try again.');
+      addNotification('error', 'Failed to export data. Please try again.');
     } finally {
       setExportLoading(false);
     }
@@ -262,12 +364,12 @@ function StudentManagement() {
     e.preventDefault();
     
     if (selectedTransferStudents.length === 0) {
-      alert('Please select at least one student to transfer.');
+      addNotification('error', 'Please select at least one student to transfer.');
       return;
     }
 
     if (!transferData.targetClassId) {
-      alert('Please select a target class.');
+      addNotification('error', 'Please select a target class.');
       return;
     }
 
@@ -278,67 +380,76 @@ function StudentManagement() {
     try {
       // Update each student's class
       const updatePromises = selectedTransferStudents.map(studentId =>
-        axios.put(`${API_BASE_URL}/admissions/students/${studentId}`, {
-          current_class_id: transferData.targetClassId,
-          // academic_year: transferData.academicYear,
-          // term: transferData.term
+        fetch(`${API_BASE_URL}/api/registrar/students/update/${studentId}/`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ current_class: transferData.targetClassId })
         })
       );
 
       await Promise.all(updatePromises);
       
-      alert(`✅ Successfully transferred ${selectedTransferStudents.length} student(s)!`);
+      addNotification('success', `Successfully transferred ${selectedTransferStudents.length} student(s)!`);
       setShowTransferModal(false);
       setSelectedTransferStudents([]);
-      setTransferData({
-        targetClassId: '',
-        academicYear: new Date().getFullYear() + '-' + (new Date().getFullYear() + 1),
-        term: 'Term 1'
-      });
+      setTransferData({ targetClassId: '' });
       await fetchData();
     } catch (error) {
       console.error('Error transferring students:', error);
-      alert('Failed to transfer students. Please try again.');
+      addNotification('error', 'Failed to transfer students. Please try again.');
     }
   };
 
-  // Calculate statistics
-  const getStatistics = () => {
-    const totalStudents = students.length;
-    const activeStudents = students.filter(s => s.status === 'active').length;
-    const maleStudents = students.filter(s => s.gender === 'male').length;
-    const femaleStudents = students.filter(s => s.gender === 'female').length;
-    const archivedStudents = students.filter(s => s.archived).length;
-
-    // Count by class
-    const studentsByClass = {};
-    students.forEach(student => {
-      const classId = student.current_class_id;
-      if (classId) {
-        if (!studentsByClass[classId]) {
-          studentsByClass[classId] = {
-            count: 0,
-            className: classes.find(c => c.id == classId)?.class_name || 'Unknown'
-          };
-        }
-        studentsByClass[classId].count++;
+  // Animation styles
+  const animationStyle = `
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
       }
-    });
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    .animate-slide-in {
+      animation: slideIn 0.3s ease-out;
+    }
+  `;
 
-    return {
-      totalStudents,
-      activeStudents,
-      maleStudents,
-      femaleStudents,
-      archivedStudents,
-      studentsByClass
-    };
-  };
-
-  const stats = getStatistics();
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <style>{animationStyle}</style>
+        <div className="text-center">
+          <i className="fas fa-exclamation-triangle text-5xl text-red-500 mb-4"></i>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Required</h2>
+          <p className="text-gray-600 mb-4">Please login to access student management</p>
+          <a 
+            href="/login" 
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 inline-block"
+          >
+            Go to Login
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <style>{animationStyle}</style>
+      
+      {/* Notifications */}
+      {notifications.map(notification => (
+        <Notification
+          key={notification.id}
+          type={notification.type}
+          message={notification.message}
+          onClose={() => removeNotification(notification.id)}
+        />
+      ))}
+
       <div className="p-6">
         {/* Header */}
         <div className="mb-8">
@@ -346,6 +457,11 @@ function StudentManagement() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Student Management</h1>
               <p className="text-gray-600 mt-1">Manage student records, classes, and transfers</p>
+              {user && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Logged in as: <span className="font-medium">{user.first_name} {user.last_name}</span> ({user.role})
+                </p>
+              )}
             </div>
             <div className="flex space-x-3">
               <button
@@ -373,32 +489,15 @@ function StudentManagement() {
                 <i className="fas fa-exchange-alt mr-2"></i>
                 Transfer Students
               </button>
+              <button
+                onClick={fetchData}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
+              >
+                <i className="fas fa-sync-alt mr-2"></i>
+                Refresh
+              </button>
             </div>
           </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center">
-                <i className="fas fa-exclamation-triangle text-red-500 mr-3"></i>
-                <div>
-                  <p className="text-red-700 font-medium">Backend Connection Error</p>
-                  <p className="text-red-600 text-sm mt-1">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center">
-                <i className="fas fa-check-circle text-green-500 mr-3"></i>
-                <div>
-                  <p className="text-green-700 font-medium">Success!</p>
-                  <p className="text-green-600 text-sm mt-1 whitespace-pre-line">{successMessage}</p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Statistics Cards */}
@@ -515,10 +614,10 @@ function StudentManagement() {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="graduated">Graduated</option>
-                <option value="transferred">Transferred</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Graduated">Graduated</option>
+                <option value="Transferred">Transferred</option>
               </select>
             </div>
             
@@ -597,7 +696,7 @@ function StudentManagement() {
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                            <i className={`fas fa-${student.gender === 'male' ? 'male' : 'female'} text-blue-600`}></i>
+                            <i className={`fas fa-${student.gender?.toLowerCase() === 'male' ? 'male' : 'female'} text-blue-600`}></i>
                           </div>
                           <div>
                             <h4 className="font-medium text-gray-900">
@@ -616,7 +715,7 @@ function StudentManagement() {
                           <div>
                             <span className="text-sm text-gray-600">Class:</span>{' '}
                             <span className="font-medium">
-                              {classes.find(c => c.id == student.current_class_id)?.class_name || 'Not assigned'}
+                              {classes.find(c => c.id == student.current_class)?.class_name || 'Not assigned'}
                             </span>
                           </div>
                           <div>
@@ -658,16 +757,16 @@ function StudentManagement() {
                           value={student.status}
                           onChange={(e) => handleStatusChange(student.id, e.target.value)}
                           className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                            student.status === 'active' ? 'bg-green-100 text-green-800 border-green-200' :
-                            student.status === 'inactive' ? 'bg-red-100 text-red-800 border-red-200' :
-                            student.status === 'graduated' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                            student.status === 'Active' ? 'bg-green-100 text-green-800 border-green-200' :
+                            student.status === 'Inactive' ? 'bg-red-100 text-red-800 border-red-200' :
+                            student.status === 'Graduated' ? 'bg-blue-100 text-blue-800 border-blue-200' :
                             'bg-gray-100 text-gray-800 border-gray-200'
                           }`}
                         >
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                          <option value="graduated">Graduated</option>
-                          <option value="transferred">Transferred</option>
+                          <option value="Active">Active</option>
+                          <option value="Inactive">Inactive</option>
+                          <option value="Graduated">Graduated</option>
+                          <option value="Transferred">Transferred</option>
                         </select>
                       </td>
                       <td className="px-6 py-4">
@@ -691,8 +790,8 @@ function StudentManagement() {
                             className="px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100"
                           >
                             <i className="fas fa-archive mr-1"></i>
-                          Archive
-                          </button> 
+                            Archive
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -710,7 +809,7 @@ function StudentManagement() {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center">
                       <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                        <i className={`fas fa-${student.gender === 'male' ? 'male' : 'female'} text-blue-600 text-2xl`}></i>
+                        <i className={`fas fa-${student.gender?.toLowerCase() === 'male' ? 'male' : 'female'} text-blue-600 text-2xl`}></i>
                       </div>
                       <div>
                         <h4 className="font-bold text-gray-900">
@@ -720,8 +819,8 @@ function StudentManagement() {
                       </div>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      student.status === 'active' ? 'bg-green-100 text-green-800' :
-                      student.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                      student.status === 'Active' ? 'bg-green-100 text-green-800' :
+                      student.status === 'Inactive' ? 'bg-red-100 text-red-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
                       {student.status}
@@ -732,7 +831,7 @@ function StudentManagement() {
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Class:</span>
                       <span className="font-medium">
-                        {classes.find(c => c.id == student.current_class_id)?.class_name || 'Not assigned'}
+                        {classes.find(c => c.id == student.current_class)?.class_name || 'Not assigned'}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -797,7 +896,7 @@ function StudentManagement() {
                 <div className="bg-gray-50 rounded-lg p-5">
                   <div className="flex items-center mb-4">
                     <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center mr-4">
-                      <i className={`fas fa-${selectedStudent.gender === 'male' ? 'male' : 'female'} text-blue-600 text-3xl`}></i>
+                      <i className={`fas fa-${selectedStudent.gender?.toLowerCase() === 'male' ? 'male' : 'female'} text-blue-600 text-3xl`}></i>
                     </div>
                     <div>
                       <h4 className="text-2xl font-bold text-gray-800">
@@ -806,8 +905,8 @@ function StudentManagement() {
                       <p className="text-gray-600">{selectedStudent.admission_no}</p>
                       <div className="flex items-center mt-2 space-x-4">
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          selectedStudent.status === 'active' ? 'bg-green-100 text-green-800' :
-                          selectedStudent.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                          selectedStudent.status === 'Active' ? 'bg-green-100 text-green-800' :
+                          selectedStudent.status === 'Inactive' ? 'bg-red-100 text-red-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {selectedStudent.status}
@@ -857,7 +956,7 @@ function StudentManagement() {
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Current Class:</span>
                         <span className="font-medium">
-                          {classes.find(c => c.id == selectedStudent.current_class_id)?.class_name || 'Not assigned'}
+                          {classes.find(c => c.id == selectedStudent.current_class)?.class_name || 'Not assigned'}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1038,6 +1137,18 @@ function StudentManagement() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Middle Name
+                      </label>
+                      <input
+                        type="text"
+                        name="middle_name"
+                        value={editFormData.middle_name}
+                        onChange={handleEditInputChange}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Last Name <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -1060,8 +1171,8 @@ function StudentManagement() {
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         required
                       >
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
                       </select>
                     </div>
                     <div>
@@ -1106,8 +1217,8 @@ function StudentManagement() {
                         Current Class
                       </label>
                       <select
-                        name="current_class_id"
-                        value={editFormData.current_class_id}
+                        name="current_class"
+                        value={editFormData.current_class}
                         onChange={handleEditInputChange}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
@@ -1154,10 +1265,10 @@ function StudentManagement() {
                         onChange={handleEditInputChange}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="graduated">Graduated</option>
-                        <option value="transferred">Transferred</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Graduated">Graduated</option>
+                        <option value="Transferred">Transferred</option>
                       </select>
                     </div>
                     <div className="md:col-span-2">
@@ -1321,34 +1432,6 @@ function StudentManagement() {
                         ))}
                       </select>
                     </div>
-                    {/* <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Academic Year
-                      </label>
-                      <input
-                        type="text"
-                        name="academicYear"
-                        value={transferData.academicYear}
-                        onChange={(e) => setTransferData({...transferData, academicYear: e.target.value})}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="e.g., 2024-2025"
-                      />
-                    </div> */}
-                    {/* <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Term
-                      </label>
-                      <select
-                        name="term"
-                        value={transferData.term}
-                        onChange={(e) => setTransferData({...transferData, term: e.target.value})}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="Term 1">Term 1</option>
-                        <option value="Term 2">Term 2</option>
-                        <option value="Term 3">Term 3</option>
-                      </select>
-                    </div> */}
                   </div>
 
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -1393,7 +1476,7 @@ function StudentManagement() {
                                 </p>
                                 <div className="flex items-center text-sm text-gray-600">
                                   <span className="mr-4">Adm: {student.admission_no}</span>
-                                  <span>Current Class: {classes.find(c => c.id == student.current_class_id)?.class_name || 'Not assigned'}</span>
+                                  <span>Current Class: {classes.find(c => c.id == student.current_class)?.class_name || 'Not assigned'}</span>
                                 </div>
                               </div>
                             </div>

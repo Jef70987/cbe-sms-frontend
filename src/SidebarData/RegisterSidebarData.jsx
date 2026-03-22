@@ -29,6 +29,11 @@ const RegisterSidebarData = [
     link: "/RegisterPortal/academic"
   },
   {
+    title: "Exam & Report Mngmnt",
+    icon: <BarChartIcon />,
+    link: "/RegisterPortal/ExamAndReportManagement"
+  },
+  {
     title: "Admission",
     icon: <SchoolIcon />,
     link: "/RegisterPortal/Admission"
@@ -43,11 +48,11 @@ const RegisterSidebarData = [
     icon: < HomeIcon/>,
     link: "/RegisterPortal/class"
   },
-  // {
-  //   title: "LogOut",
-  //   icon: <LogoutIcon sx={{color:'white',fontSize:30}}/>,
-  //   link: "/Login"
-  // },
+  {
+    title: "LogOut",
+    icon: <LogoutIcon sx={{color:'red',fontSize:30}}/>,
+    link: "/Logout"
+  },
   
 ];
 

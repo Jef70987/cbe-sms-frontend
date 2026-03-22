@@ -3,21 +3,17 @@ import { HashRouter as Router , Routes ,Route } from "react-router-dom";
 
 import Bursar from "./components/BursarPortal/Bursar";
 import Login from "./components/Authentication/Login";
+import Logout from "./components/Authentication/Logout";
 import Register from "./components/RegisterPortal/Register";
 import Hr from "./components/HrPortal/Hr";
 import { AuthProvider } from "./components/Authentication/AuthContext";
 import ProtectedRoute from "./components/Authentication/ProtectedRoute";
 import Accountant from "./components/AccountantPortal/Finance";
 import Teacher from "./components/TeacherPortal/TeacherMain";
-<<<<<<< HEAD
 import Student from "./components/StudentPortal/StudentMain";
 import DeputyPrincipal from "./components/DeputyPrincipalPortal/Deputy";
 import Principal from "./components/PrincipalPortal/Principal";
-=======
-import Principal from "./components/PrincipalPortal/Principal";
-import Deputy from  "./components/DeputyPrincipalPortal/Deputy";
-
->>>>>>> a0c12f5acab9b8f5c7c998dd8abe0ff6f67aa55f
+import ForgotPassword from "./components/Authentication/Reset";
 function App() {
     return(
         <AuthProvider>
@@ -25,12 +21,13 @@ function App() {
                 <Routes>
                     <Route path="/" element={<Login/>}/>
                     <Route path="/Login/" element={<Login/>}/>
-
+                    <Route path="/Logout/" element={<ProtectedRoute><Logout/></ProtectedRoute>}/>
+                    <Route path="/Reset/" element={<ForgotPassword/>}/>
                     {/* wrapping all portals with ProtectedRoute */}
                     <Route path="/RegisterPortal/*" element={
-                            // <ProtectedRoute allowedRoles={['registrar']}>
+                            <ProtectedRoute allowedRoles={['registrar']}>
                                 <Register/>
-                            // </ProtectedRoute>
+                            </ProtectedRoute>
                         }/>
                     <Route path="/FinancePortal/*" element={
                         <ProtectedRoute allowedRoles={['accountant']}>
@@ -43,25 +40,15 @@ function App() {
                         </ProtectedRoute>
                             }/>
                     <Route path="/TeacherPortal/*" element={
-                        // <ProtectedRoute allowedRoles={['teacher']}>
+                        <ProtectedRoute allowedRoles={['teacher']}>
                             <Teacher/>
-                        // {/* </ProtectedRoute> */}
+                        </ProtectedRoute>
                             }/>
-                    <Route path="/PrincipalPortal/*" element={
-                    //    <ProtectedRoute allowedRoles={['principal']}>
-                          <Principal/>
-                    //   </ProtectedRoute>
-                        }/>
 
-                    <Route path="/DeputyPortal/*" element={
-                    //    <ProtectedRoute allowedRoles={['deputy_principal']}>
-                           <DeputyPrincipal/>
-                    //    </ProtectedRoute>
-                       }/>
                     <Route path="/StudentPortal/*" element={
-                        // <ProtectedRoute allowedRoles={['teacher']}>
+                        <ProtectedRoute allowedRoles={['student']}>
                             <Student/>
-                        // {/* </ProtectedRoute> */}
+                        </ProtectedRoute>
                             }/>
                     <Route path="/HrPortal/*" element={
                         <ProtectedRoute allowedRoles={['hr_manager']}>
@@ -76,7 +63,7 @@ function App() {
 
                     <Route path="/DeputyPortal/*" element={
                        <ProtectedRoute allowedRoles={['deputy_principal']}>
-                           <Deputy/>
+                           <DeputyPrincipal/>
                        </ProtectedRoute>
                        }/>
 

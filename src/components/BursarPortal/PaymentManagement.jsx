@@ -1,294 +1,679 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+/* eslint-disable no-unused-vars */
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
-  Search, 
-  User, 
-  DollarSign,
-  CreditCard, 
-  Printer, 
-  Loader2,
-  X,
-  ChevronRight,
-  Receipt,
-  BookOpen,
-  AlertCircle,
-  Check,
-  FileText,
-  Calculator
+  Search, User, DollarSign, CreditCard, Printer, Loader2,
+  X, ChevronRight, Receipt, BookOpen, AlertCircle, Check,
+  FileText, Calculator, RefreshCw, Filter, Clock, LogOut,
+  Users, AlertTriangle, Info, ChevronDown, ChevronUp
 } from 'lucide-react';
+import { useAuth } from '../Authentication/AuthContext';
 
-// Configure axios base URL
-const API_BASE_URL = 'http://localhost:3000/api/bursar';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+// Toast Notification Component
+const Toast = ({ message, type, onClose }) => {
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+      setTimeout(onClose, 300);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const bgColor = {
+    success: 'bg-gradient-to-r from-emerald-500 to-green-500',
+    error: 'bg-gradient-to-r from-rose-500 to-pink-500',
+    info: 'bg-gradient-to-r from-blue-500 to-cyan-500',
+    warning: 'bg-gradient-to-r from-amber-500 to-orange-500'
+  };
+
+  const icon = {
+    success: <Check className="text-white" size={18} />,
+    error: <AlertCircle className="text-white" size={18} />,
+    info: <Info className="text-white" size={18} />,
+    warning: <AlertTriangle className="text-white" size={18} />
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <div className="fixed top-4 right-4 z-50 animate-slideIn">
+      <div className={`${bgColor[type]} text-white rounded-lg shadow-xl p-4 min-w-[320px] max-w-md`}>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-full">{icon[type]}</div>
+            <div>
+              <p className="font-semibold capitalize">{type}</p>
+              <p className="text-sm text-white/90 mt-1">{message}</p>
+            </div>
+          </div>
+          <button onClick={() => { setIsVisible(false); setTimeout(onClose, 300); }} className="text-white/70 hover:text-white p-1 rounded-full hover:bg-white/10">
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Session Expired Modal
+const SessionExpiredModal = ({ isOpen, onLogout }) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <div className="flex items-center mb-4">
+            <AlertCircle className="h-8 w-8 text-red-500 mr-3" />
+            <h3 className="text-xl font-semibold text-gray-900">Session Expired</h3>
+          </div>
+          <p className="text-gray-600 mb-6">Your session has expired. Please login again to continue.</p>
+          <div className="flex justify-end">
+            <button onClick={onLogout} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Confirmation Modal
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, loading }) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <div className="flex items-center mb-4">
+            <AlertCircle className="h-6 w-6 text-yellow-500 mr-3" />
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          </div>
+          <p className="text-gray-600 mb-6">{message}</p>
+          <div className="flex justify-end gap-3">
+            <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+            <button onClick={onConfirm} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Confirm Payment
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Student Selection Modal
+const StudentSelectionModal = ({ isOpen, onClose, students, onSelect, loading }) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h3 className="text-lg font-semibold text-gray-800">Select Student</h3>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-4 max-h-[60vh] overflow-y-auto">
+          {loading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
+          ) : (
+            <div className="space-y-2">
+              {students.map(student => (
+                <div
+                  key={student.id}
+                  onClick={() => onSelect(student)}
+                  className="p-4 border border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-all"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-gray-800">{student.first_name} {student.last_name}</p>
+                      <p className="text-sm text-gray-500">Admission: {student.admission_no}</p>
+                    </div>
+                    <ChevronRight className="text-gray-400" />
+                  </div>
+                </div>
+              ))}
+              {students.length === 0 && (
+                <div className="text-center py-8 text-gray-500">No students found in this class</div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Receipt Modal
+const ReceiptModal = ({ isOpen, onClose, transaction, student, formatCurrency, currentClass, invoices }) => {
+  if (!isOpen || !transaction || !student) return null;
+  
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const academicYear = `${currentYear}-${currentYear + 1}`;
+  const term = 'Term 1';
+  const formattedTerm = term;
+  
+  const amountPaid = transaction.amount_kes || 0;
+  const receiptNo = transaction.transaction_no;
+  const payMethod = transaction.payment_mode || 'CASH';
+  const payRef = transaction.payment_reference || 'N/A';
+  const previousBalance = transaction.previous_balance || 0;
+  const newBalance = previousBalance - amountPaid;
+  const balanceDescription = previousBalance < 0 ? 'Credit Balance' : 'Outstanding Balance';
+  const newBalanceDescription = newBalance < 0 ? 'Credit Balance' : 'Outstanding Balance';
+  
+  const printReceipt = () => {
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) return;
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Payment Receipt - ${student.admission_no}</title>
+        <meta charset="UTF-8">
+        <style>
+          @media print {
+            @page { margin: 0; size: auto; }
+            body { margin: 0; padding: 10px; }
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Arial', sans-serif; font-size: 12px; line-height: 1.4; color: #000; padding: 10px; max-width: 800px; margin: 0 auto; }
+          .receipt { border: 2px solid #1e40af; padding: 15px; margin: 0 auto; }
+          .header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #1e40af; padding-bottom: 10px; }
+          .logo-container { display: flex; justify-content: center; align-items: center; margin-bottom: 10px; height: 70px; }
+          .school-logo { max-height: 60px; max-width: 200px; object-fit: contain; }
+          .school-name { font-size: 22px; font-weight: bold; color: #1e40af; margin-bottom: 5px; }
+          .motto { font-size: 14px; color: #666; font-style: italic; margin-bottom: 10px; }
+          .receipt-title { font-size: 18px; font-weight: bold; margin: 10px 0; }
+          .receipt-no { font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+          .academic-year { font-size: 14px; font-weight: bold; margin: 5px 0; }
+          .section { margin: 10px 0; }
+          .section-title { font-weight: bold; font-size: 14px; color: #1e40af; margin-bottom: 5px; padding-bottom: 3px; border-bottom: 1px solid #ccc; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+          .info-label { font-weight: bold; color: #555; }
+          table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+          th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+          th { background-color: #f3f4f6; font-weight: bold; }
+          .total-row { font-weight: bold; background-color: #f0f9ff; }
+          .balance-row { font-weight: bold; }
+          .amount { text-align: right; }
+          .negative { color: #059669; }
+          .positive { color: #dc2626; }
+          .signature-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc; display: flex; justify-content: space-between; }
+          .signature-box { text-align: center; width: 45%; }
+          .signature-line { border-top: 1px solid #000; margin: 40px 0 5px 0; width: 100%; }
+          .signature-label { font-weight: bold; margin-top: 5px; }
+          .footer { text-align: center; margin-top: 20px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 11px; color: #666; }
+          .calculation-note { font-size: 10px; color: #666; margin-top: 5px; font-style: italic; }
+          @media print { .receipt { border: none; } .school-logo { max-height: 50px !important; } }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">
+          <div class="header">
+            <div class="logo-container">
+              <img src="/logo.jpeg" alt="Jawabu School Logo" class="school-logo" onerror="this.style.display='none'" />
+            </div>
+            <div class="school-name">JAWABU SCHOOL</div>
+            <div class="motto">Striving for Excellence</div>
+            <div class="receipt-title">OFFICIAL FEE PAYMENT RECEIPT</div>
+            <div class="receipt-no">Receipt No: ${receiptNo}</div>
+            <div class="academic-year">Academic Year: ${academicYear} | Term: ${formattedTerm}</div>
+            <div>Date: ${currentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} | Time: ${currentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">Student Information</div>
+            <div class="info-grid">
+              <div class="info-row"><span class="info-label">Student Name:</span> <span>${student.first_name} ${student.last_name}</span></div>
+              <div class="info-row"><span class="info-label">Admission No:</span> <span>${student.admission_no}</span></div>
+              <div class="info-row"><span class="info-label">Class:</span> <span>${currentClass || student.class_name}</span></div>
+              <div class="info-row"><span class="info-label">Term:</span> <span>${formattedTerm}</span></div>
+            </div>
+          </div>
+          
+          ${invoices && invoices.length > 0 ? `
+          <div class="section">
+            <div class="section-title">Invoice Details</div>
+            <table>
+              <thead>
+                <tr><th>Invoice No</th><th>Date</th><th>Due Date</th><th class="amount">Total Amount</th><th class="amount">Paid</th><th class="amount">Balance</th><th>Status</th> </thead>
+              <tbody>
+                ${invoices.map(invoice => {
+                  const balanceAmount = parseFloat(invoice.balance_amount || 0);
+                  return `
+                  <tr>
+                    <td>${invoice.invoice_no || 'N/A'}</td>
+                    <td>${invoice.invoice_date ? new Date(invoice.invoice_date).toLocaleDateString() : 'N/A'}</td>
+                    <td>${invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'N/A'}</td>
+                    <td class="amount">KSh ${parseFloat(invoice.total_amount || 0).toLocaleString('en-KE', {minimumFractionDigits: 2})}</td>
+                    <td class="amount">KSh ${parseFloat(invoice.amount_paid || 0).toLocaleString('en-KE', {minimumFractionDigits: 2})}</td>
+                    <td class="amount ${balanceAmount < 0 ? 'negative' : balanceAmount > 0 ? 'positive' : ''}">${balanceAmount < 0 ? '-' : ''}KSh ${Math.abs(balanceAmount).toLocaleString('en-KE', {minimumFractionDigits: 2})}</td>
+                    <td>${invoice.payment_status || invoice.status || 'PENDING'}</td>
+                   </tr>
+                  `;
+                }).join('')}
+              </tbody>
+             </table>
+          </div>
+          ` : ''}
+          
+          <div class="section">
+            <div class="section-title">Payment Details</div>
+            <table>
+              <thead>
+                <tr><th>Description</th><th>Payment Method</th><th>Reference</th><th class="amount">Amount (KSh)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>School Fee Payment</td><td>${payMethod}</td><td>${payRef}</td><td class="amount">${amountPaid.toLocaleString('en-KE', {minimumFractionDigits: 2})}</td></tr>
+                <tr class="total-row"><td colspan="3"><strong>TOTAL AMOUNT PAID</strong></td><td class="amount"><strong>${amountPaid.toLocaleString('en-KE', {minimumFractionDigits: 2})}</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">Balance Calculation</div>
+            <table>
+              <tbody>
+                <tr><td><strong>Previous ${balanceDescription}:</strong></td><td class="amount ${previousBalance < 0 ? 'negative' : previousBalance > 0 ? 'positive' : ''}">${previousBalance < 0 ? '-' : ''}KSh ${Math.abs(previousBalance).toLocaleString('en-KE', {minimumFractionDigits: 2})}</td></tr>
+                <tr><td><strong>Amount Paid:</strong></td><td class="amount positive">KSh ${amountPaid.toLocaleString('en-KE', {minimumFractionDigits: 2})}</td></tr>
+                <tr class="balance-row"><td><strong>NEW ${newBalanceDescription}:</strong></td><td class="amount ${newBalance < 0 ? 'negative' : newBalance > 0 ? 'positive' : ''}"><strong>${newBalance < 0 ? '-' : ''}KSh ${Math.abs(newBalance).toLocaleString('en-KE', {minimumFractionDigits: 2})}</strong></td></tr>
+              </tbody>
+            </table>
+            ${newBalance < 0 ? `<div class="calculation-note" style="color: #059669;">Note: Credit balance of ${formatCurrency(Math.abs(newBalance))} will be carried forward</div>` : ''}
+          </div>
+          
+          <div class="signature-section">
+            <div class="signature-box"><div class="signature-line"></div><div class="signature-label">Bursar Signature</div></div>
+            <div class="signature-box"><div class="signature-line"></div><div class="signature-label">Student/Parent Signature</div></div>
+          </div>
+          
+          <div class="footer">
+            <div>*** This is an official computer-generated receipt ***</div>
+            <div>Thank you for your payment. Please keep this receipt for your records.</div>
+            <div>© ${new Date().getFullYear()} Jawabu School - Striving for Excellence</div>
+          </div>
+        </div>
+        <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <h3 className="text-lg font-semibold text-gray-800">Payment Receipt</h3>
+          <div className="flex gap-2">
+            <button onClick={printReceipt} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+              <Printer size={16} /> Print
+            </button>
+            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+        <div className="p-6">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-blue-700">JAWABU SCHOOL</h2>
+            <p className="text-gray-600 italic">Striving for Excellence</p>
+            <div className="border-t border-gray-300 my-3"></div>
+            <p className="text-lg font-bold text-gray-800">OFFICIAL FEE PAYMENT RECEIPT</p>
+            <p className="text-sm text-gray-600 mt-1">Receipt No: <span className="font-mono font-bold">{receiptNo}</span></p>
+            <p className="text-sm text-gray-500">Date: {new Date().toLocaleString()}</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div><span className="text-gray-600">Student Name:</span> <span className="font-semibold">{student.first_name} {student.last_name}</span></div>
+            <div><span className="text-gray-600">Admission No:</span> <span className="font-semibold">{student.admission_no}</span></div>
+            <div><span className="text-gray-600">Class:</span> <span className="font-semibold">{currentClass || student.class_name}</span></div>
+            <div><span className="text-gray-600">Payment Method:</span> <span className="font-semibold">{payMethod}</span></div>
+            {payRef !== 'N/A' && <div className="col-span-2"><span className="text-gray-600">Reference:</span> <span className="font-semibold">{payRef}</span></div>}
+          </div>
+          
+          {invoices && invoices.length > 0 && (
+            <div className="mb-6">
+              <h4 className="font-semibold text-gray-800 mb-3">Invoice Details</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border p-2 text-left">Invoice No</th>
+                      <th className="border p-2 text-left">Date</th>
+                      <th className="border p-2 text-left">Due Date</th>
+                      <th className="border p-2 text-right">Total</th>
+                      <th className="border p-2 text-right">Paid</th>
+                      <th className="border p-2 text-right">Balance</th>
+                      <th className="border p-2 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoices.map((inv, idx) => (
+                      <tr key={idx}>
+                        <td className="border p-2 font-mono text-xs">{inv.invoice_no}</td>
+                        <td className="border p-2">{new Date(inv.invoice_date).toLocaleDateString()}</td>
+                        <td className="border p-2">{new Date(inv.due_date).toLocaleDateString()}</td>
+                        <td className="border p-2 text-right">{formatCurrency(inv.total_amount)}</td>
+                        <td className="border p-2 text-right text-green-600">{formatCurrency(inv.amount_paid)}</td>
+                        <td className={`border p-2 text-right font-bold ${parseFloat(inv.balance_amount) < 0 ? 'text-green-600' : parseFloat(inv.balance_amount) > 0 ? 'text-red-600' : ''}`}>{formatCurrency(inv.balance_amount)}</td>
+                        <td className="border p-2"><span className={`px-2 py-1 text-xs rounded-full ${inv.payment_status === 'PAID' ? 'bg-green-100 text-green-800' : inv.payment_status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{inv.payment_status || inv.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          
+          <div className="mb-6">
+            <h4 className="font-semibold text-gray-800 mb-3">Payment Details</h4>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100"><th className="border p-2 text-left">Description</th><th className="border p-2 text-left">Payment Method</th><th className="border p-2 text-left">Reference</th><th className="border p-2 text-right">Amount (KES)</th></tr>
+              </thead>
+              <tbody>
+                <tr><td className="border p-2">School Fee Payment - {formattedTerm} {academicYear}</td><td className="border p-2">{payMethod}</td><td className="border p-2">{payRef}</td><td className="border p-2 text-right font-bold">{formatCurrency(amountPaid)}</td></tr>
+                <tr className="bg-gray-50 font-bold"><td colSpan="3" className="border p-2">TOTAL PAID</td><td className="border p-2 text-right text-green-700">{formatCurrency(amountPaid)}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div className="mb-6">
+            <h4 className="font-semibold text-gray-800 mb-3">Balance Calculation</h4>
+            <table className="w-full border-collapse">
+              <tbody>
+                <tr><td className="border p-2"><strong>Previous {balanceDescription}:</strong></td><td className={`border p-2 text-right font-bold ${previousBalance < 0 ? 'text-green-600' : previousBalance > 0 ? 'text-red-600' : ''}`}>{formatCurrency(previousBalance)}</td></tr>
+                <tr><td className="border p-2"><strong>Amount Paid:</strong></td><td className="border p-2 text-right font-bold text-blue-600">- {formatCurrency(amountPaid)}</td></tr>
+                <tr className="bg-gray-50"><td className="border p-2"><strong>NEW {newBalanceDescription}:</strong></td><td className={`border p-2 text-right font-bold text-lg ${newBalance < 0 ? 'text-green-600' : newBalance > 0 ? 'text-red-600' : ''}`}>{formatCurrency(newBalance)}</td></tr>
+              </tbody>
+            </table>
+            {newBalance < 0 && (
+              <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                Note: Credit balance of {formatCurrency(Math.abs(newBalance))} will be carried forward to next term.
+              </div>
+            )}
+          </div>
+          
+          <div className="text-center text-sm text-gray-500 mt-6 pt-4 border-t border-gray-200">
+            <p>Thank you for your payment. Keep this receipt for your records.</p>
+            <p>© {new Date().getFullYear()} Jawabu School - Striving for Excellence</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main PaymentManagement Component
 const PaymentManagement = () => {
+  const { user, getAuthHeaders, isAuthenticated, logout } = useAuth();
+  
   // State management
   const [searchMode, setSearchMode] = useState('admission');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [classes, setClasses] = useState([]);
-  const [currentClass, setCurrentClass] = useState('');
-  
-  // Student data
   const [students, setStudents] = useState([]);
+  const [studentList, setStudentList] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [studentBalance, setStudentBalance] = useState(0);
-  const [creditBalance, setCreditBalance] = useState(0);
+  const [studentBalance, setStudentBalance] = useState(null);
   const [invoices, setInvoices] = useState([]);
-  
-  // Payment data
+  const [creditBalance, setCreditBalance] = useState(0);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [paymentReference, setPaymentReference] = useState('');
   const [mobileMoneyNo, setMobileMoneyNo] = useState('');
   const [bankName, setBankName] = useState('');
   const [chequeNo, setChequeNo] = useState('');
-  
-  // Recent transactions
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [loadingStudents, setLoadingStudents] = useState(false);
-  
-  // UI states
-  const [notification, setNotification] = useState({ show: false, type: '', message: '' });
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [showStudentModal, setShowStudentModal] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState(null);
-  const [showClassStudents, setShowClassStudents] = useState(false);
-  const [classStudents, setClassStudents] = useState([]);
+  const [toasts, setToasts] = useState([]);
+  const [showSessionExpired, setShowSessionExpired] = useState(false);
+  const [isCheckingInvoice, setIsCheckingInvoice] = useState(false);
+  const [currentClass, setCurrentClass] = useState('');
 
-
-  const netCredit = creditBalance - paymentAmount;
-  // Initialize
-  useEffect(() => {
-    fetchClasses();
-    fetchRecentTransactions();
-  }, []);
-
-  // Notification handler
-  const showNotification = (type, message, duration = 5000) => {
-    setNotification({ show: true, type, message });
-    setTimeout(() => setNotification({ show: false, type: '', message: '' }), duration);
+  const showToast = (message, type = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
   };
 
-  // Fetch classes from backend
+  const handleApiError = (error) => {
+    if (error?.status === 401 || error?.message?.includes('Unauthorized')) {
+      setShowSessionExpired(true);
+    }
+  };
+
+  const handleLogout = () => {
+    setShowSessionExpired(false);
+    logout();
+    window.location.href = '/logout';
+  };
+
+  // Fetch classes
   const fetchClasses = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/students/classes`);
-      if (response.data.success) {
-        setClasses(response.data.data || []);
-      } else {
-        showNotification('error', 'Failed to load classes');
-      }
+      const res = await fetch(`${API_BASE_URL}/api/registrar/classes/`, { headers: getAuthHeaders() });
+      if (res.status === 401) { handleApiError({ status: 401 }); return; }
+      const data = await res.json();
+      if (data.success) setClasses(data.data || []);
     } catch (error) {
-      console.error('Error fetching classes:', error);
-      showNotification('error', 'Failed to load classes');
+      showToast('Failed to load classes', 'error');
     }
   };
 
+  // Fetch recent transactions
   const fetchRecentTransactions = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/transactions/recent?limit=5`);
-      if (response.data.success) {
-        setRecentTransactions(response.data.data || []);
-      }
+      const res = await fetch(`${API_BASE_URL}/api/bursar/transactions/recent/?limit=5`, { headers: getAuthHeaders() });
+      if (res.status === 401) { handleApiError({ status: 401 }); return; }
+      const data = await res.json();
+      if (data.success) setRecentTransactions(data.data || []);
     } catch (error) {
-      console.error('Error fetching recent transactions:', error);
+      console.error('Error fetching transactions:', error);
     }
   };
 
-  // FIXED: Search function based on your actual backend
-  const searchStudents = useCallback(async () => {
-    if (!searchQuery.trim() && searchMode !== 'class') {
-      showNotification('error', `Please enter ${searchMode === 'admission' ? 'admission number' : 'student name'}`);
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchClasses();
+      fetchRecentTransactions();
+    }
+  }, [isAuthenticated]);
+
+  // Search students by admission number
+  const searchByAdmission = async () => {
+    if (!searchQuery.trim()) {
+      showToast('Please enter admission number', 'warning');
       return;
     }
-
-    if (searchMode === 'class' && !selectedClass) {
-      showNotification('error', 'Please select a class');
-      return;
-    }
-
-    setLoadingStudents(true);
-    try {
-      // Build parameters based on your backend
-      const params = {};
-      
-      if (searchMode === 'admission') {
-        params.admission_no = searchQuery.trim();
-      } else if (searchMode === 'name') {
-        params.name = searchQuery.trim();
-      } else if (searchMode === 'class') {
-        params.class_id = selectedClass;
-      }
-
-      console.log('Searching with params:', params);
-
-      const response = await axios.get(`${API_BASE_URL}/students/search`, { 
-        params,
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
-      
-      console.log('Search response:', response.data);
-      
-      if (response.data.success) {
-        const foundStudents = response.data.data || [];
-        
-        if (foundStudents.length === 0) {
-          showNotification('info', 'No students found');
-          setStudents([]);
-        } else {
-          setStudents(foundStudents);
-          
-          // If class search, show modal with students
-          if (searchMode === 'class') {
-            setClassStudents(foundStudents);
-            setShowClassStudents(true);
-          }
-        }
-      } else {
-        showNotification('error', response.data.message || 'Failed to search students');
-        setStudents([]);
-      }
-    } catch (error) {
-      console.error('Error searching students:', error);
-      console.error('Error details:', error.response?.data);
-      showNotification('error', error.response?.data?.error || 'Failed to search students');
-      setStudents([]);
-    } finally {
-      setLoadingStudents(false);
-    }
-  }, [searchMode, searchQuery, selectedClass]);
-
-  const selectStudent = async (student) => {
-    setSelectedStudent(student);
-    setStudents([]);
-    setShowClassStudents(false);
     
+    const admissionRegex = /^[A-Za-z0-9-]+$/;
+    if (!admissionRegex.test(searchQuery.trim())) {
+      showToast('Invalid admission number format', 'error');
+      return;
+    }
+    
+    setLoading(true);
     try {
-      // Fetch student balance from backend
-      const response = await fetch(`${API_BASE_URL}/students/${student.id}/balance`, {
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
-      const results = await response.json()
-      console.log('Balance response:', results.data);
-      console.log('Student class response:', student);
-      if (results.data.success) {
-        const balanceData = results.data.data;
-        const totalBalanceData = results.data.total_balance;
-        const totalNetBalanceData = results.data.net_balance;
-        const currentStudentClass = results.data.class;
-        
-        setCurrentClass(currentStudentClass);
-        setCreditBalance(totalNetBalanceData);
-        if (totalBalanceData != 0){
-          setStudentBalance(totalBalanceData);
-        }else{
-          setStudentBalance(totalNetBalanceData);
-          
-        }
-        
-        
-        // Get invoices from balance data
-        if (balanceData.invoices) {
-          setInvoices(balanceData.invoices);
-        }
-        
-        showNotification('success', 'Student loaded successfully');
+      const res = await fetch(`${API_BASE_URL}/api/bursar/students/search/?admission_no=${searchQuery.trim()}`, { headers: getAuthHeaders() });
+      if (res.status === 401) { handleApiError({ status: 401 }); return; }
+      const data = await res.json();
+      if (data.success && data.data && data.data.length > 0) {
+        const student = data.data[0];
+        setSelectedStudent(student);
+        setCurrentClass(student.class_name || '');
+        await checkStudentInvoice(student.id);
+        setStudents([]);
+        setSearchQuery('');
       } else {
-        showNotification('error', response.data.message || 'Failed to load student balance');
+        showToast('Student not found', 'error');
       }
     } catch (error) {
-      console.error('Error fetching student balance:', error);
-      showNotification('error', 'Failed to load student balance');
+      showToast('Failed to search student', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // FIXED: Get actual balance from backend response
-  const getCurrentBalance = () => {
-   
-    return studentBalance;
+  // Search students by name
+  const searchByName = async () => {
+    if (!searchQuery.trim()) {
+      showToast('Please enter student name', 'warning');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/bursar/students/search/?name=${encodeURIComponent(searchQuery.trim())}`, { headers: getAuthHeaders() });
+      if (res.status === 401) { handleApiError({ status: 401 }); return; }
+      const data = await res.json();
+      if (data.success) {
+        setStudents(data.data || []);
+        if (data.data.length === 0) showToast('No students found', 'info');
+        else if (data.data.length === 1) {
+          setSelectedStudent(data.data[0]);
+          setCurrentClass(data.data[0].class_name || '');
+          await checkStudentInvoice(data.data[0].id);
+          setStudents([]);
+          setSearchQuery('');
+        }
+      }
+    } catch (error) {
+      showToast('Failed to search students', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
- 
-const getExcessPayment = () => {
-  const currentBalance = getCurrentBalance();
-  const payment = parseFloat(paymentAmount || 0);
-  
-  // Only show excess if student has debt (positive balance) AND payment is more than debt
-  if (currentBalance > 0 && payment > currentBalance) {
-    return payment - currentBalance;
-  }
-  return 0;
-};
-
-// Add function to check if payment is valid
-const isValidPayment = () => {
-  const amount = parseFloat(paymentAmount || 0);
-  const currentBalance = getCurrentBalance();
-  
-  if (!amount || amount <= 0 || isNaN(amount)) {
-    return { valid: false, message: 'Please enter a valid amount' };
-  }
-  
-  // If student already has credit (negative balance), they can still pay
-  // This will increase their credit
-  if (currentBalance < 0) {
-    return { valid: true, message: 'Student has credit. Payment will increase credit balance.' };
-  }
-  
-  return { valid: true, message: '' };
-};
-
-  // FIXED: Calculate new balance properly
-  const getNewBalance = () => {
-    const calculateNewBalance = getCurrentBalance() - paymentAmount;
-    return calculateNewBalance;
+  // Get students by class
+  const getStudentsByClass = async () => {
+    if (!selectedClass) {
+      showToast('Please select a class', 'warning');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/bursar/students/by-class/?class_id=${selectedClass}`, { headers: getAuthHeaders() });
+      if (res.status === 401) { handleApiError({ status: 401 }); return; }
+      const data = await res.json();
+      if (data.success) {
+        setStudentList(data.data || []);
+        if (data.data.length === 0) showToast('No students in this class', 'info');
+        else setShowStudentModal(true);
+      }
+    } catch (error) {
+      showToast('Failed to fetch students', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Check if student has invoice for current term
+  const checkStudentInvoice = async (studentId) => {
+    setIsCheckingInvoice(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/bursar/students/${studentId}/invoice-status/`, { headers: getAuthHeaders() });
+      if (res.status === 401) { handleApiError({ status: 401 }); return; }
+      const data = await res.json();
+      if (data.success) {
+        if (data.data.has_invoice) {
+          await fetchStudentBalance(studentId);
+        } else {
+          showToast('Generating invoice for current term...', 'info');
+          await generateInvoice(studentId);
+        }
+      }
+    } catch (error) {
+      showToast('Failed to check invoice status', 'error');
+    } finally {
+      setIsCheckingInvoice(false);
+    }
+  };
+
+  // Generate invoice for student
+  const generateInvoice = async (studentId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/bursar/students/${studentId}/generate-invoice/`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      if (res.status === 401) { handleApiError({ status: 401 }); return; }
+      const data = await res.json();
+      if (data.success) {
+        showToast('Invoice generated successfully', 'success');
+        await fetchStudentBalance(studentId);
+      } else {
+        showToast(data.error || 'Failed to generate invoice', 'error');
+      }
+    } catch (error) {
+      showToast('Failed to generate invoice', 'error');
+    }
+  };
+
+  // Fetch student balance
+  const fetchStudentBalance = async (studentId) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/bursar/students/${studentId}/balance/`, { headers: getAuthHeaders() });
+      if (res.status === 401) { handleApiError({ status: 401 }); return; }
+      const data = await res.json();
+      if (data.success) {
+        setStudentBalance(data.data.current_balance);
+        setCreditBalance(data.data.credit_balance);
+        setInvoices(data.data.invoices || []);
+      }
+    } catch (error) {
+      showToast('Failed to load student balance', 'error');
+    }
+  };
+
+  // Process payment
   const processPayment = async () => {
     if (!selectedStudent) {
-      showNotification('error', 'Please select a student first');
+      showToast('Please select a student first', 'error');
       return;
     }
-
-    const validation = isValidPayment();
-    if (!validation.valid) {
-      showNotification('error', validation.message);
+    
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount < 5) {
+      showToast('Minimum payment amount is KSh 5.00', 'warning');
       return;
     }
-
-    // Validate payment method specific fields
+    
     if (paymentMethod === 'MPESA' && !mobileMoneyNo) {
-      showNotification('error', 'Please enter M-PESA number');
+      showToast('Please enter M-PESA number', 'warning');
       return;
     }
-
     if (paymentMethod === 'Bank Transfer' && !bankName) {
-      showNotification('error', 'Please enter bank name');
+      showToast('Please enter bank name', 'warning');
       return;
     }
-
     if (paymentMethod === 'Cheque' && !chequeNo) {
-      showNotification('error', 'Please enter cheque number');
+      showToast('Please enter cheque number', 'warning');
       return;
     }
-
-    // Show warning if paying more than outstanding balance
-    const currentBalance = getCurrentBalance();
-    const excess = getExcessPayment();
-    if (excess > 0) {
-      if (!window.confirm(`Student has outstanding balance of ${formatCurrency(currentBalance)}.\n\nYou are paying ${formatCurrency(paymentAmount)}, which is ${formatCurrency(excess)} more than the outstanding amount.\n\nThe excess will be recorded as credit.\n\nContinue?`)) {
-        return;
-      }
-    }
-
+    
     setShowConfirmation(true);
   };
-
+  
   const confirmPayment = async () => {
     setLoading(true);
     try {
@@ -301,1529 +686,315 @@ const isValidPayment = () => {
         cheque_no: chequeNo,
         mobile_money_no: mobileMoneyNo,
         status: 'COMPLETED',
-        payment_date: new Date().toISOString(),
-        collected_by_id: 1
+        payment_date: new Date().toISOString()
       };
-
-      console.log('Sending payment data:', transactionData);
-
-      const response = await axios.post(`${API_BASE_URL}/transactions`, transactionData);
       
-      console.log('Payment response:', response.data);
+      const res = await fetch(`${API_BASE_URL}/api/bursar/transactions/create/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(transactionData)
+      });
       
-      if (response.data.success) {
-        setCurrentTransaction(response.data.data);
+      const data = await res.json();
+      
+      if (data.success) {
+        setCurrentTransaction(data.data.transaction);
         setShowConfirmation(false);
         setShowReceipt(true);
-        
-        // Refresh student balance after payment
-        setTimeout(async () => {
-          try {
-            const balanceResponse = await axios.get(`${API_BASE_URL}/students/${selectedStudent.id}/balance`);
-            if (balanceResponse.data.success) {
-              setStudentBalance(balanceResponse.data.data.total_balance);
-              if (balanceResponse.data.data.invoices) {
-                setInvoices(balanceResponse.data.data.invoices);
-              }
-            }
-          } catch (error) {
-            console.error('Error refreshing balance:', error);
-          }
-        }, 500);
-        
-        // Refresh recent transactions
-        fetchRecentTransactions();
-        
-        showNotification('success', 'Payment processed successfully!');
-        
+        showToast('Payment processed successfully!', 'success');
+        await fetchRecentTransactions();
       } else {
-        showNotification('error', response.data.message || 'Failed to process payment');
+        showToast(data.error || 'Failed to process payment', 'error');
       }
     } catch (error) {
-      console.error('Error processing payment:', error);
-      showNotification('error', error.response?.data?.message || 'Failed to process payment');
+      showToast('Failed to process payment', 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  // Reset form after receipt is closed
+  const handleReceiptClose = () => {
+    setShowReceipt(false);
+    setCurrentTransaction(null);
+    resetForm();
+  };
+
+  // Reset form after payment
   const resetForm = () => {
     setSelectedStudent(null);
     setStudentBalance(null);
+    setCreditBalance(0);
+    setInvoices([]);
     setPaymentAmount('');
     setPaymentReference('');
     setMobileMoneyNo('');
     setBankName('');
     setChequeNo('');
-    setStudents([]);
-    setInvoices([]);
-    setShowClassStudents(false);
     setSearchQuery('');
     setSelectedClass('');
+    setStudents([]);
+    setStudentList([]);
+    setCurrentClass('');
   };
 
   const formatCurrency = (amount) => {
-    // Convert to number first
     const num = Number(amount);
-    // Check if it's a valid number
-    if (isNaN(num)) {
-      return 'KSh 0.00';
-    }
-    
-    // Handle negative numbers
-    if (num < 0) {
-      return `-KSh ${Math.abs(num).toLocaleString('en-KE', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })}`;
-    }
-    
-    // Handle positive numbers
-    return `KSh ${num.toLocaleString('en-KE', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    })}`;
+    if (isNaN(num)) return 'KSh 0.00';
+    return `KSh ${num.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // FIXED: Professional print function
-  const printReceipt = () => {
-  // Get current date for academic year
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  
-  // Get data from the first invoice (if available)
-  const firstInvoice = invoices && invoices.length > 0 ? invoices[0] : null;
-  
-  // Use academic year from invoice, or fallback to current year
-  const academicYear = firstInvoice?.academic_year || `${currentYear}`;
-  
-  // Use term from invoice, or fallback to current class
-  const term = firstInvoice?.term || currentClass;
-  // Format term for display (convert "TERM_3" to "Term 3")
-  const formattedTerm = term.replace('TERM_', 'Term ');
-  
-  const printWindow = window.open('', '_blank', 'width=800,height=600');
-  
-  if (!printWindow) {
-    showNotification('error', 'Please allow popups to print receipt');
-    return;
+  const getCurrentBalance = () => {
+    if (studentBalance !== null) return studentBalance;
+    return 0;
+  };
+
+  const getNewBalance = () => {
+    const current = getCurrentBalance();
+    const payment = parseFloat(paymentAmount) || 0;
+    return current - payment;
+  };
+
+  const getExcessPayment = () => {
+    const current = getCurrentBalance();
+    const payment = parseFloat(paymentAmount) || 0;
+    if (current > 0 && payment > current) return payment - current;
+    return 0;
+  };
+
+  const handleSearch = () => {
+    if (searchMode === 'admission') searchByAdmission();
+    else if (searchMode === 'name') searchByName();
+    else if (searchMode === 'class') getStudentsByClass();
+  };
+
+  const handleSelectStudent = async (student) => {
+    setSelectedStudent(student);
+    setCurrentClass(student.class_name || '');
+    setShowStudentModal(false);
+    await checkStudentInvoice(student.id);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center"><AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" /><h2 className="text-2xl font-bold">Authentication Required</h2><p className="text-gray-600 mt-2">Please login to access fee payment</p><a href="/login" className="mt-4 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg">Go to Login</a></div>
+      </div>
+    );
   }
-  
-  const currentBalance = getCurrentBalance();
-  const newBalance = getNewBalance();
-  const amountPaid = parseFloat(paymentAmount || currentTransaction?.amount_kes || 0);
-  
-  // Get invoice balance (sum of all invoice balances)
-  const invoiceTotalBalance = invoices && invoices.length > 0 
-    ? invoices.reduce((sum, invoice) => sum + parseFloat(invoice.balance_amount || 0), 0)
-    : currentBalance;
-  
-  // Use invoice balance as the previous balance
-  const previousBalance = invoiceTotalBalance;
-  
-  // FIXED: Show proper balance description based on invoice balance
-  const balanceDescription = previousBalance < 0 ? 'Credit Balance' : 'Outstanding Balance';
-  const newBalanceDescription = newBalance < 0 ? 'Credit Balance' : 'Outstanding Balance';
-  
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Payment Receipt - ${selectedStudent?.admission_no}</title>
-      <meta charset="UTF-8">
-      <style>
-        @media print {
-          @page {
-            margin: 0;
-            size: auto;
-          }
-          body {
-            margin: 0;
-            padding: 10px;
-          }
-        }
-        
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-        
-        body {
-          font-family: 'Arial', sans-serif;
-          font-size: 12px;
-          line-height: 1.4;
-          color: #000;
-          padding: 10px;
-          max-width: 800px;
-          margin: 0 auto;
-        }
-        
-        .receipt {
-          border: 2px solid #1e40af;
-          padding: 15px;
-          margin: 0 auto;
-        }
-        
-        .header {
-          text-align: center;
-          margin-bottom: 15px;
-          border-bottom: 2px solid #1e40af;
-          padding-bottom: 10px;
-        }
-        
-        .logo-container {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          margin-bottom: 10px;
-          height: 70px; /* Reduced height for better fit */
-        }
-        
-        .school-logo {
-          max-height: 60px;
-          max-width: 200px;
-          object-fit: contain;
-        }
-        
-        .school-name {
-          font-size: 22px;
-          font-weight: bold;
-          color: #1e40af;
-          margin-bottom: 5px;
-        }
-        
-        .receipt-title {
-          font-size: 18px;
-          font-weight: bold;
-          margin: 10px 0;
-        }
-        
-        .receipt-no {
-          font-size: 14px;
-          font-weight: bold;
-          margin-bottom: 5px;
-        }
-        
-        .academic-year {
-          font-size: 14px;
-          font-weight: bold;
-          margin: 5px 0;
-        }
-        
-        .section {
-          margin: 10px 0;
-        }
-        
-        .section-title {
-          font-weight: bold;
-          font-size: 14px;
-          color: #1e40af;
-          margin-bottom: 5px;
-          padding-bottom: 3px;
-          border-bottom: 1px solid #ccc;
-        }
-        
-        .info-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-          margin: 10px 0;
-        }
-        
-        .info-row {
-          margin: 5px 0;
-        }
-        
-        .info-label {
-          font-weight: bold;
-          color: #555;
-        }
-        
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 10px 0;
-        }
-        
-        th, td {
-          border: 1px solid #000;
-          padding: 8px;
-          text-align: left;
-        }
-        
-        th {
-          background-color: #f3f4f6;
-          font-weight: bold;
-        }
-        
-        .total-row {
-          font-weight: bold;
-          background-color: #f0f9ff;
-        }
-        
-        .balance-row {
-          font-weight: bold;
-        }
-        
-        .amount {
-          text-align: right;
-        }
-        
-        .negative {
-          color: #059669; /* Green for credit */
-        }
-        
-        .positive {
-          color: #dc2626; /* Red for debt */
-        }
-        
-        .signature-section {
-          margin-top: 30px;
-          padding-top: 20px;
-          border-top: 1px solid #ccc;
-          display: flex;
-          justify-content: space-between;
-        }
-        
-        .signature-box {
-          text-align: center;
-          width: 45%;
-        }
-        
-        .signature-line {
-          border-top: 1px solid #000;
-          margin: 40px 0 5px 0;
-          width: 100%;
-        }
-        
-        .signature-label {
-          font-weight: bold;
-          margin-top: 5px;
-        }
-        
-        .signature-title {
-          font-size: 11px;
-          color: #666;
-        }
-        
-        .footer {
-          text-align: center;
-          margin-top: 20px;
-          padding-top: 10px;
-          border-top: 1px solid #ccc;
-          font-size: 11px;
-          color: #666;
-        }
-        
-        .calculation-note {
-          font-size: 10px;
-          color: #666;
-          margin-top: 5px;
-          font-style: italic;
-        }
-        
-        .invoice-status-paid {
-          background-color: #d1fae5;
-          color: #065f46;
-          padding: 2px 6px;
-          border-radius: 12px;
-          font-size: 10px;
-        }
-        
-        .invoice-status-partial {
-          background-color: #fef3c7;
-          color: #92400e;
-          padding: 2px 6px;
-          border-radius: 12px;
-          font-size: 10px;
-        }
-        
-        .invoice-status-pending {
-          background-color: #fee2e2;
-          color: #991b1b;
-          padding: 2px 6px;
-          border-radius: 12px;
-          font-size: 10px;
-        }
-        
-        @media print {
-          body {
-            padding: 0;
-          }
-          .receipt {
-            border: none;
-          }
-          .logo-container {
-            height: 60px !important;
-          }
-          .school-logo {
-            max-height: 50px !important;
-            max-width: 180px !important;
-          }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="receipt">
-        <div class="header">
-          <div class="logo-container">
-            <img 
-              src="assets/logo.jpg"
-              alt="School Logo" 
-              class="school-logo"
-            />
-          </div>
-          <div class="school-name">BETHEL JUNIOR CAMPUS</div>
-          <div>In God We Trust</div>
-          <div class="receipt-title">OFFICIAL FEE PAYMENT RECEIPT</div>
-          <div class="receipt-no">Receipt No: ${currentTransaction?.transaction_no || 'TEMP-' + Date.now()}</div>
-          <div class="academic-year">Academic Year: ${academicYear} | Term: ${formattedTerm}</div>
-          <div>Date: ${new Date().toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })} | Time: ${new Date().toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          })}</div>
-        </div>
-
-        
-        <div class="section">
-          <div class="section-title">Student Information</div>
-          <div class="info-grid">
-            <div class="info-row">
-              <span class="info-label">Student Name:</span>
-              <span>${selectedStudent?.first_name} ${selectedStudent?.last_name}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Admission No:</span>
-              <span>${selectedStudent?.admission_no}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Class:</span>
-              <span>${currentClass}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Term:</span>
-              <span>${formattedTerm}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="section">
-          <div class="section-title">Payment Details</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th>Payment Method</th>
-                <th>Reference</th>
-                <th>Amount (KSh)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>School Fee Payment</td>
-                <td>${currentTransaction?.payment_mode || paymentMethod}</td>
-                <td>${currentTransaction?.payment_reference || paymentReference || 'N/A'}</td>
-                <td class="amount">${amountPaid.toLocaleString('en-KE', {minimumFractionDigits: 2})}</td>
-              </tr>
-              <tr class="total-row">
-                <td colspan="3"><strong>TOTAL AMOUNT PAID</strong></td>
-                <td class="amount"><strong>${amountPaid.toLocaleString('en-KE', {minimumFractionDigits: 2})}</strong></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        
-        ${invoices && invoices.length > 0 ? `
-        <div class="section">
-          <div class="section-title">Invoice Details</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Invoice No</th>
-                <th>Date</th>
-                <th>Due Date</th>
-                <th>Total Amount</th>
-                <th>Total Paid</th>
-                <th>Outstanding Balance</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${invoices.map((invoice, index) => {
-                const invoiceDate = invoice.invoice_date ? new Date(invoice.invoice_date).toLocaleDateString() : 'N/A';
-                const dueDate = invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'N/A';
-                const totalAmount = invoice.total_amount ? parseFloat(invoice.total_amount).toLocaleString('en-KE', {minimumFractionDigits: 2}) : '0.00';
-                const amountPaidInvoice = invoice.amount_paid ? parseFloat(invoice.amount_paid).toLocaleString('en-KE', {minimumFractionDigits: 2}) : '0.00';
-                const balanceAmount = invoice.balance_amount ? parseFloat(invoice.balance_amount) : 0;
-                const balanceFormatted = balanceAmount.toLocaleString('en-KE', {minimumFractionDigits: 2});
-                const balanceClass = balanceAmount < 0 ? 'negative' : balanceAmount > 0 ? 'positive' : '';
-                const status = invoice.payment_status || invoice.status || 'PENDING';
-                const statusClass = status === 'PAID' ? 'invoice-status-paid' : 
-                                   status === 'PARTIAL' ? 'invoice-status-partial' : 
-                                   'invoice-status-pending';
-                
-                return `
-                  <tr>
-                    <td>${invoice.invoice_no || 'N/A'}</td>
-                    <td>${invoiceDate}</td>
-                    <td>${dueDate}</td>
-                    <td class="amount">KSh ${totalAmount}</td>
-                    <td class="amount">KSh ${amountPaidInvoice}</td>
-                    <td class="amount ${balanceClass}">${balanceAmount < 0 ? '-' : ''}KSh ${Math.abs(balanceAmount).toLocaleString('en-KE', {minimumFractionDigits: 2})}</td>
-                    <td><span class="${statusClass}">${status}</span></td>
-                  </tr>
-                `;
-              }).join('')}
-              ${invoices.length > 1 ? `
-              <tr class="total-row">
-                <td colspan="5"><strong>TOTAL INVOICE BALANCE:</strong></td>
-                <td class="amount ${previousBalance < 0 ? 'negative' : previousBalance > 0 ? 'positive' : ''}">
-                  <strong>${previousBalance < 0 ? '-' : ''}KSh ${Math.abs(previousBalance).toLocaleString('en-KE', {minimumFractionDigits: 2})}</strong>
-                </td>
-                <td></td>
-              </tr>
-              ` : ''}
-            </tbody>
-          </table>
-        </div>
-        ` : ''}
-        
-        <div class="section">
-          <div class="section-title">Balance Calculation</div>
-          <table>
-            <tbody>
-              <tr>
-                <td><strong>Previous ${balanceDescription}:</strong></td>
-                <td class="amount ${previousBalance < 0 ? 'negative' : previousBalance > 0 ? 'positive' : ''}">
-                  ${previousBalance < 0 ? '-' : ''}KSh ${Math.abs(previousBalance).toLocaleString('en-KE', {minimumFractionDigits: 2})}
-                </td>
-              </tr>
-              <tr>
-                <td><strong>Amount Paid:</strong></td>
-                <td class="amount positive">
-                   KSh ${amountPaid.toLocaleString('en-KE', {minimumFractionDigits: 2})}
-                </td>
-              </tr>
-              <tr class="balance-row">
-                <td><strong>NEW ${newBalanceDescription}:</strong></td>
-                <td class="amount ${newBalance < 0 ? 'negative' : newBalance > 0 ? 'positive' : ''}">
-                  <strong>${newBalance < 0 ? '-' : ''}KSh ${Math.abs(netCredit).toLocaleString('en-KE', {minimumFractionDigits: 2})}</strong>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          
-          ${newBalance < 0 ? `
-          <div class="calculation-note" style="color: #059669; font-weight: bold;">
-            Note: Negative balance indicates credit of ${formatCurrency(Math.abs(netCredit))}
-          </div>
-          ` : ''}
-        </div>
-        
-        
-        <div class="footer">
-          <div>*** This is an official computer-generated receipt ***</div>
-          <div>Thank you for your payment. Please keep this receipt for your records.</div>
-          <div>For any queries, contact: Bursar Department</div>
-          <div> © ${new Date().getFullYear()}Bethel Junior Campus powered by syntelsafe</div>
-        </div>
-      </div>
-      
-      
-      <script>
-        // Auto-print after page loads
-        window.onload = function() {
-          setTimeout(function() {
-            window.print();
-          }, 500);
-        };
-      </script>
-    </body>
-    </html>
-  `);
-  
-  printWindow.document.close();
-};
-
-
-  // Render notification
-  const renderNotification = () => (
-    notification.show && (
-      <div className={`fixed top-4 right-4 z-50 max-w-sm w-full ${
-        notification.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
-        notification.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
-        'bg-blue-50 border-blue-200 text-blue-800'
-      } border rounded-lg shadow-lg p-4`}>
-        <div className="flex items-start">
-          <div className="flex-shrink-0">
-            {notification.type === 'error' ? <AlertCircle className="w-5 h-5" /> :
-             notification.type === 'success' ? <Check className="w-5 h-5" /> :
-             <div className="w-5 h-5">ℹ️</div>}
-          </div>
-          <div className="ml-3 flex-1">
-            <p className="text-sm font-medium">
-              {notification.message}
-            </p>
-          </div>
-          <button
-            onClick={() => setNotification({ show: false, type: '', message: '' })}
-            className="ml-4 text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
-        </div>
-      </div>
-    )
-  );
-
-  // Render class students modal
-  const renderClassStudentsModal = () => (
-    showClassStudents && classStudents.length > 0 && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg w-full max-w-6xl max-h-[80vh] overflow-hidden">
-          <div className="bg-blue-600 text-white p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold">Select Student from Class</h3>
-                <p className="text-blue-100">
-                  {classStudents.length} students found in selected class
-                </p>
-              </div>
-              <button
-                onClick={() => setShowClassStudents(false)}
-                className="p-2 hover:bg-blue-700 rounded"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-          </div>
-          
-          <div className="p-4 max-h-[60vh] overflow-y-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {classStudents.map((student) => (
-                <div
-                  key={student.id}
-                  onClick={() => selectStudent(student)}
-                  className="border border-gray-300 rounded-lg p-4 hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-colors"
-                >
-                  <div className="flex items-start">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                      <User className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold text-gray-900">
-                        {student.first_name} {student.last_name}
-                      </div>
-                      <div className="text-sm text-gray-600 mb-2">{student.admission_no}</div>
-                      <div className="text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Class:</span>
-                          <span className="font-medium">{student.class_name}</span>
-                        </div>
-                        <div className="flex justify-between mt-1">
-                          <span className="text-gray-600">Balance:</span>
-                          <span className={`font-bold ${
-                            (student.outstanding_balance || 0) < 0 ? 'text-green-600' :
-                            (student.outstanding_balance || 0) > 0 ? 'text-red-600' :
-                            'text-gray-600'
-                          }`}>
-                            {formatCurrency(student.outstanding_balance)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400 ml-2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="border-t border-gray-300 p-4">
-            <button
-              onClick={() => setShowClassStudents(false)}
-              className="w-full py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  );
-
-  // Render confirmation modal - UPDATED
-const renderConfirmationModal = () => (
-  showConfirmation && selectedStudent && (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-md">
-        <div className="p-6">
-          <div className="text-center mb-6">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CreditCard className="w-6 h-6 text-blue-600" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900">Confirm Payment</h3>
-            <p className="text-gray-600 mt-1">Please review payment details</p>
-          </div>
-          
-          {/* Student Info */}
-          <div className="mb-6">
-            <div className="flex items-center mb-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                <User className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="font-bold text-gray-900">
-                  {selectedStudent.first_name} {selectedStudent.last_name}
-                </div>
-                <div className="text-sm text-gray-600">{selectedStudent.admission_no}</div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Payment Details */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Class:</span>
-                <span className="font-medium">{selectedStudent.class_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Payment Method:</span>
-                <span className="font-medium">{paymentMethod}</span>
-              </div>
-              {paymentReference && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Reference:</span>
-                  <span className="font-medium">{paymentReference}</span>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Balance Calculation - CORRECTED */}
-          <div className="bg-white border border-gray-300 rounded-lg p-4 mb-6">
-            <div className="text-center font-bold text-gray-900 mb-3">Balance Calculation</div>
-            
-            <div className="space-y-2">
-              {/* Current Balance */}
-              <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                <div>
-                  <div className="text-sm text-gray-600">Current Balance</div>
-                  <div className={`text-sm ${
-                    getCurrentBalance() < 0 ? 'text-green-600' :
-                    getCurrentBalance() > 0 ? 'text-red-600' :
-                    'text-gray-600'
-                  }`}>
-                    {getCurrentBalance() < 0 ? 'Credit' : 'Outstanding'}
-                  </div>
-                </div>
-                <div className={`text-lg font-bold ${
-                  getCurrentBalance() < 0 ? 'text-green-600' :
-                  getCurrentBalance() > 0 ? 'text-red-600' :
-                  'text-gray-600'
-                }`}>
-                  {formatCurrency(getCurrentBalance())}
-                </div>
-              </div>
-              
-              {/* Minus Payment */}
-              <div className="flex justify-between items-center p-2">
-                <div>
-                  <div className="text-sm text-gray-600">Payment Amount</div>
-                  <div className="text-sm text-blue-600">Minus</div>
-                </div>
-                <div className="text-lg font-bold text-blue-600">
-                  - {formatCurrency(paymentAmount)}
-                </div>
-              </div>
-              
-              {/* Divider */}
-              <div className="border-t border-gray-300 my-2"></div>
-              
-              {/* New Balance */}
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded border border-gray-300">
-                <div>
-                  <div className="font-bold text-gray-900">New Balance</div>
-                  <div className={`text-sm ${
-                    getNewBalance() < 0 ? 'text-green-600' :
-                    getNewBalance() > 0 ? 'text-red-600' :
-                    'text-gray-600'
-                  }`}>
-                    {getNewBalance() < 0 ? 'Credit Balance' :
-                     getNewBalance() > 0 ? 'Outstanding Balance' : 'Paid in Full'}
-                  </div>
-                </div>
-                <div className={`text-2xl font-bold ${
-                  getNewBalance() < 0 ? 'text-green-600' :
-                  getNewBalance() > 0 ? 'text-red-600' :
-                  'text-gray-600'
-                }`}>
-                  {formatCurrency(getNewBalance())}
-                </div>
-              </div>
-              
-              {/* Calculation Formula */}
-              {/* <div className="text-center text-sm text-gray-500 mt-3 p-2 bg-blue-50 rounded">
-                <div className="font-medium">Calculation:</div>
-                <div className="font-mono">
-                  {formatCurrency(getCurrentBalance())} - {formatCurrency(paymentAmount)} = {formatCurrency(getNewBalance())}
-                </div>
-              </div> */}
-              
-              {/* Excess Payment Warning */}
-              {getExcessPayment() > 0 && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mt-3">
-                  <div className="flex items-start">
-                    <AlertCircle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <div className="text-sm font-medium text-yellow-800">Excess Payment</div>
-                      <div className="text-sm text-yellow-700">
-                        Student will receive {formatCurrency(getExcessPayment())} credit
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowConfirmation(false)}
-              className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmPayment}
-              disabled={loading}
-              className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
-                </span>
-              ) : (
-                'Confirm Payment'
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-);
-
-  // Render receipt modal
-  const renderReceiptModal = () => (
-    showReceipt && currentTransaction && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg w-full max-w-2xl">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">Payment Receipt</h3>
-                <p className="text-gray-600">Payment completed successfully</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={printReceipt}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center"
-                >
-                  <Printer className="w-4 h-4 mr-2" />
-                  Print Receipt
-                </button>
-                <button
-                  onClick={() => setShowReceipt(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-            
-            {/* Receipt Preview */}
-            <div className="border border-gray-300 rounded p-6 bg-gray-50">
-              <div className="text-center mb-6">
-                <div className="font-bold text-lg text-blue-600">BETHEL JUNIOR CAMPUS</div>
-                <div className="text-sm text-gray-600">Official Fee Payment Receipt</div>
-                <div className="text-sm mt-2 font-medium">Receipt No: {currentTransaction.receipt.receipt_no}</div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-6 mb-6">
-                <div>
-                  <div className="text-sm font-medium text-gray-600">Student Name</div>
-                  <div className="font-bold">{selectedStudent.first_name} {selectedStudent.last_name}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-600">Admission No</div>
-                  <div className="font-bold">{selectedStudent.admission_no}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-600">Class</div>
-                  <div className="font-bold">{currentClass}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-600">Date</div>
-                  <div className="font-bold">{new Date().toLocaleDateString()}</div>
-                </div>
-              </div>
-              
-              <div className="border-t border-gray-300 pt-6">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-medium">Payment Method:</span>
-                  <span>{currentTransaction.receipt.payment_details.payment_mode}</span>
-                </div>
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-medium">Reference:</span>
-                  <span>{currentTransaction.receipt.payment_details.payment_reference || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-medium">Amount Paid:</span>
-                  <span className="font-bold text-green-600">{formatCurrency(currentTransaction.transaction.amount_kes)}</span>
-                </div>
-                
-                {/* {studentBalance && (
-                  <>
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="font-medium">Previous Balance:</span>
-                      <span className={`${
-                        getCurrentBalance() < 0 ? 'text-green-600' :
-                        getCurrentBalance() > 0 ? 'text-red-600' :
-                        'text-gray-600'
-                      }`}>
-                        {formatCurrency(getCurrentBalance())}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pt-3 border-t border-gray-300">
-                      <span className="font-bold">New Balance:</span>
-                      <span className={`font-bold text-lg ${
-                        getNewBalance() < 0 ? 'text-green-600' :
-                        getNewBalance() > 0 ? 'text-red-600' :
-                        'text-gray-600'
-                      }`}>
-                        {formatCurrency(getNewBalance())}
-                      </span>
-                    </div>
-                  </>
-                )} */}
-              </div>
-              
-              <div className="text-center text-sm text-gray-600 mt-8 pt-6 border-t border-gray-300">
-                <div>Thank you for your payment</div>
-                <div>Keep this receipt for your records</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  );
-
-  // Render invoices section
-  const renderInvoicesSection = () => (
-    invoices.length > 0 && (
-      <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Active Invoices</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Invoice No</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Date</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Due Date</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Total Amount</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Amount Paid</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Balance</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-300">
-              {invoices.map((invoice, index) => (
-                <tr key={index}>
-                  <td className="px-4 py-3 text-sm text-gray-900">{invoice.invoice_no}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {new Date(invoice.invoice_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {new Date(invoice.due_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-medium">
-                    {formatCurrency(invoice.total_amount)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-green-600">
-                    {formatCurrency(invoice.amount_paid)}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-bold ${
-                    parseFloat(invoice.balance_amount || 0) < 0 ? 'text-green-600' :
-                    parseFloat(invoice.balance_amount || 0) > 0 ? 'text-red-600' :
-                    'text-gray-600'
-                  }">
-                    {formatCurrency(invoice.balance_amount)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      invoice.payment_status === 'PAID' ? 'bg-green-100 text-green-800' :
-                      invoice.payment_status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {invoice.payment_status || invoice.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )
-  );
-
-  // Render search section
-  const renderSearchSection = () => (
-    <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
-      <div className="mb-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Find Student</h3>
-        <p className="text-gray-600">Search by admission number, name, or class</p>
-      </div>
-      
-      {/* Search Tabs */}
-      <div className="flex space-x-2 mb-6">
-        {['admission', 'name', 'class'].map((mode) => (
-          <button
-            key={mode}
-            onClick={() => {
-              setSearchMode(mode);
-              setStudents([]);
-              setShowClassStudents(false);
-              setSearchQuery('');
-            }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${
-              searchMode === mode
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {mode === 'admission' ? 'Admission No' :
-             mode === 'name' ? 'Student Name' : 'Class'}
-          </button>
-        ))}
-      </div>
-      
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {(searchMode === 'admission' || searchMode === 'name') && (
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {searchMode === 'admission' ? 'Admission Number *' : 'Student Name *'}
-              </label>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && searchStudents()}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder={searchMode === 'admission' ? 'Enter admission number' : 'Enter student name'}
-              />
-            </div>
-          )}
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {searchMode === 'class' ? 'Class *' : 'Class (Optional)'}
-            </label>
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Select Class</option>
-              {classes.map((cls) => (
-                <option key={cls.id} value={cls.id}>
-                  {cls.class_name} ({cls.class_code})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        
-        <div className="flex gap-3">
-          <button
-            onClick={searchStudents}
-            disabled={loadingStudents}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center"
-          >
-            {loadingStudents ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Searching...
-              </>
-            ) : (
-              <>
-                <Search className="w-4 h-4 mr-2" />
-                Search Student
-              </>
-            )}
-          </button>
-          
-          <button
-            onClick={resetForm}
-            className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-          >
-            Clear
-          </button>
-        </div>
-      </div>
-      
-      {/* Search Results (for admission/name search) */}
-      {students.length > 0 && searchMode !== 'class' && (
-        <div className="mt-6 border border-gray-300 rounded-lg overflow-hidden">
-          <div className="bg-gray-50 px-4 py-3 border-b border-gray-300">
-            <div className="font-medium text-gray-900">
-              Search Results ({students.length})
-            </div>
-          </div>
-          <div className="max-h-60 overflow-y-auto">
-            {students.map((student) => (
-              <div
-                key={student.id}
-                onClick={() => selectStudent(student)}
-                className="px-4 py-3 border-b border-gray-300 hover:bg-blue-50 cursor-pointer last:border-b-0"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      {student.first_name} {student.last_name}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {student.admission_no} • {student.class_name}
-                    </div>
-                    <div className="text-xs text-blue-500 mt-1 font-bold ">
-                      Click to select
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-red-600">
-                      !!Notice ,if NEW REGISTRATION paying, kindly adjust the estimated invoice by paying 0.000001 at first then proceed to pay the actual student amount
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  // Render payment form
-  const renderPaymentForm = () => (
-  selectedStudent && (
-    <>
-      <div className="bg-white rounded-lg border border-gray-300 p-6 mb-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Payment Details</h3>
-            <p className="text-gray-600">Enter payment information for selected student</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-              {selectedStudent.admission_no}
-            </span>
-            <button
-              onClick={resetForm}
-              className="text-sm text-red-600 hover:text-red-800"
-            >
-              Change Student
-            </button>
-          </div>
-        </div>
-        
-        {/* Student Summary */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Student Name</div>
-              <div className="font-bold text-gray-900 text-lg">
-                {selectedStudent.first_name} {selectedStudent.last_name}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Class</div>
-              <div className="font-bold text-gray-900 text-lg">{currentClass}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Current Balance</div>
-              <div className={`text-2xl font-bold ${
-                getCurrentBalance() < 0 ? 'text-green-600' :
-                getCurrentBalance() > 0 ? 'text-red-600' :
-                'text-gray-600'
-              }`}>
-                {formatCurrency(getCurrentBalance())}
-                {getCurrentBalance() < 0 && ' (Credit)'}
-                {getCurrentBalance() > 0 && ' (Outstanding)'}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Status</div>
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                getCurrentBalance() < 0 ? 'bg-green-100 text-green-800' :
-                getCurrentBalance() > 0 ? 'bg-red-100 text-red-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {getCurrentBalance() < 0 ? 'CREDIT' :
-                 getCurrentBalance() > 0 ? 'OUTSTANDING' : 'PAID'}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Payment Form */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Amount Input with Calculations */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Amount (KSh) *
-              </label>
-              <input
-                type="number"
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                min="0.01"
-                step="0.01"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="0.00"
-              />
-              
-              {/* Current Balance and Calculation Preview */}
-              {selectedStudent && (
-                <div className="mt-3 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Current Balance:</span>
-                    <span className={`text-sm font-bold ${
-                      getCurrentBalance() < 0 ? 'text-green-600' :
-                      getCurrentBalance() > 0 ? 'text-red-600' :
-                      'text-gray-600'
-                    }`}>
-                      {formatCurrency(getCurrentBalance())}
-                      {getCurrentBalance() < 0 && ' (Credit)'}
-                    </span>
-                  </div>
-                  
-                  {/* Excess Payment Warning */}
-                  {getExcessPayment() > 0 && (
-                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-start">
-                        <AlertCircle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <div className="text-sm font-medium text-yellow-800">
-                            Excess Payment Detected
-                          </div>
-                          <div className="text-sm text-yellow-700 mt-1">
-                            You are paying {formatCurrency(getExcessPayment())} more than the outstanding balance.
-                            This will be recorded as credit.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Calculation Preview */}
-                  {paymentAmount && parseFloat(paymentAmount) > 0 && (
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                      <div className="text-sm font-medium text-gray-700 mb-1">Calculation Preview:</div>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div className="flex justify-between">
-                          <span>Current Balance:</span>
-                          <span>{formatCurrency(getCurrentBalance())}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Minus Payment:</span>
-                          <span className="text-blue-600">- {formatCurrency(paymentAmount)}</span>
-                        </div>
-                        <div className="flex justify-between pt-1 border-t border-gray-300">
-                          <span className="font-medium">New Balance:</span>
-                          <span className={`font-bold ${
-                            getNewBalance() < 0 ? 'text-green-600' :
-                            getNewBalance() > 0 ? 'text-red-600' :
-                            'text-gray-600'
-                          }`}>
-                            {formatCurrency(getNewBalance())}
-                            {getNewBalance() < 0 && ' (Credit)'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            {/* Payment Method */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Method *
-              </label>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="MPESA">M-PESA</option>
-                <option value="Cash">Cash</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="Cheque">Cheque</option>
-              </select>
-            </div>
-            
-            {/* Payment Method Specific Fields */}
-            {paymentMethod === 'MPESA' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  M-PESA Number *
-                </label>
-                <input
-                  type="text"
-                  value={mobileMoneyNo}
-                  onChange={(e) => setMobileMoneyNo(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="07XX XXX XXX"
-                />
-              </div>
-            )}
-            
-            {paymentMethod === 'Bank Transfer' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bank Name *
-                </label>
-                <input
-                  type="text"
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Bank name"
-                />
-              </div>
-            )}
-            
-            {paymentMethod === 'Cheque' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cheque Number *
-                </label>
-                <input
-                  type="text"
-                  value={chequeNo}
-                  onChange={(e) => setChequeNo(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Cheque number"
-                />
-              </div>
-            )}
-            
-            {/* Payment Reference */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Reference (Optional)
-              </label>
-              <input
-                type="text"
-                value={paymentReference}
-                onChange={(e) => setPaymentReference(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Payment reference"
-              />
-            </div>
-          </div>
-          
-          {/* Payment Summary */}
-          <div className="space-y-6">
-            <div className="bg-gray-50 border border-gray-300 rounded-lg p-6">
-              <h4 className="font-bold text-gray-900 mb-4">Payment Summary</h4>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Student:</span>
-                  <span className="font-medium text-right">
-                    {selectedStudent.first_name}<br/>
-                    {selectedStudent.last_name}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Admission:</span>
-                  <span className="font-medium">{selectedStudent.admission_no}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Class:</span>
-                  <span className="font-medium">{currentClass}</span>
-                </div>
-                
-                <div className="pt-3 border-t border-gray-300">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Current Balance:</span>
-                    <span className={`font-bold ${
-                      getCurrentBalance() < 0 ? 'text-green-600' :
-                      getCurrentBalance() > 0 ? 'text-red-600' :
-                      'text-gray-600'
-                    }`}>
-                      {formatCurrency(getCurrentBalance())}
-                    </span>
-                  </div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Payment Amount:</span>
-                    <span className="font-bold text-blue-600">{formatCurrency(paymentAmount)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Payment Method:</span>
-                    <span className="font-medium">{paymentMethod}</span>
-                  </div>
-                </div>
-                
-                <div className="pt-3 border-t border-gray-300">
-                  <div className="flex justify-between">
-                    <span className="font-bold text-gray-900">New Balance:</span>
-                    <span className={`font-bold text-lg ${
-                      getNewBalance() < 0 ? 'text-green-600' :
-                      getNewBalance() > 0 ? 'text-red-600' :
-                      'text-gray-600'
-                    }`}>
-                      {formatCurrency(getNewBalance())}
-                    </span>
-                  </div>
-                  {getExcessPayment() > 0 && (
-                    <div className="text-sm text-yellow-600 mt-2">
-                      Excess: {formatCurrency(getExcessPayment())} credit
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <button
-                onClick={processPayment}
-                disabled={!paymentAmount || parseFloat(paymentAmount) <= 0}
-                className="w-full mt-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center"
-              >
-                <Calculator className="w-5 h-5 mr-2" />
-                Process Payment
-              </button>
-              
-              {getExcessPayment() > 0 && (
-                <div className="text-xs text-yellow-600 mt-3 text-center">
-                  Note: Excess payment will be recorded as student credit
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Show invoices if available */}
-      {renderInvoicesSection()}
-    </>
-  )
-);
-
-  // Render recent transactions
-  const renderRecentTransactions = () => (
-    <div className="bg-white rounded-lg border border-gray-300 p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold text-gray-900">Recent Transactions</h3>
-        <button
-          onClick={fetchRecentTransactions}
-          className="text-sm text-blue-600 hover:text-blue-800"
-        >
-          Refresh
-        </button>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Transaction</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Student</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Amount</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Method</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Date</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-300">
-            {recentTransactions.map((transaction) => (
-              <tr key={transaction.id}>
-                <td className="px-4 py-3 text-sm text-gray-900">{transaction.transaction_no}</td>
-                <td className="px-4 py-3">
-                  <div className="text-sm font-medium text-gray-900">
-                    {transaction.first_name} {transaction.last_name}
-                  </div>
-                  <div className="text-xs text-gray-600">{transaction.admission_no}</div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="font-bold text-green-600">
-                    {formatCurrency(transaction.amount_kes)}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    transaction.payment_mode === 'MPESA' ? 'bg-green-100 text-green-800' :
-                    transaction.payment_mode === 'Cash' ? 'bg-blue-100 text-blue-800' :
-                    transaction.payment_mode === 'Bank Transfer' ? 'bg-purple-100 text-purple-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {transaction.payment_mode}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {new Date(transaction.payment_date).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    transaction.status === 'VERIFIED' ? 'bg-green-100 text-green-800' :
-                    transaction.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {transaction.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      {renderNotification()}
-      {renderClassStudentsModal()}
-      {renderConfirmationModal()}
-      {renderReceiptModal()}
+      <style>{`@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } } .animate-slideIn { animation: slideIn 0.3s ease-out; }`}</style>
+      
+      <SessionExpiredModal isOpen={showSessionExpired} onLogout={handleLogout} />
+      {toasts.map(t => <Toast key={t.id} message={t.message} type={t.type} onClose={() => setToasts(prev => prev.filter(t2 => t2.id !== t.id))} />)}
       
       <div className="max-w-full">
+        {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Fee Payment Management</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Fee Payment Management</h1>
           <p className="text-gray-600 mt-1">Process student fee payments and generate receipts</p>
+          {user && <p className="text-xs text-gray-400 mt-1">{user.first_name} {user.last_name} • {user.role}</p>}
         </div>
         
-        <div className="space-y-6">
-          {renderSearchSection()}
-          {renderPaymentForm()}
-          {renderRecentTransactions()}
+        {/* Search Section */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 shadow-sm">
+          <h3 className="text-lg font-semibold mb-4">Find Student</h3>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {['admission', 'name', 'class'].map(mode => (
+              <button key={mode} onClick={() => { setSearchMode(mode); setSearchQuery(''); setSelectedClass(''); setStudents([]); }} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${searchMode === mode ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                {mode === 'admission' ? 'Admission Number' : mode === 'name' ? 'Student Name' : 'Class'}
+              </button>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(searchMode === 'admission' || searchMode === 'name') && (
+              <div className="md:col-span-2">
+                <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSearch()} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder={searchMode === 'admission' ? 'Enter admission number' : 'Enter student name'} />
+              </div>
+            )}
+            {searchMode === 'class' && (
+              <div className="md:col-span-2">
+                <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                  <option value="">Select Class</option>
+                  {classes.map(cls => <option key={cls.id} value={cls.id}>{cls.class_name} ({cls.class_code})</option>)}
+                </select>
+              </div>
+            )}
+            <div>
+              <button onClick={handleSearch} disabled={loading || isCheckingInvoice} className="w-full px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                {(loading || isCheckingInvoice) && <Loader2 className="h-4 w-4 animate-spin" />}
+                {loading ? 'Searching...' : isCheckingInvoice ? 'Checking Invoice...' : 'Search'}
+              </button>
+            </div>
+          </div>
+          
+          {/* Search Results for Name Search */}
+          {students.length > 0 && searchMode === 'name' && (
+            <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-2 border-b"><span className="font-medium">Select Student ({students.length})</span></div>
+              <div className="max-h-60 overflow-y-auto">
+                {students.map(s => (
+                  <div key={s.id} onClick={() => { setSelectedStudent(s); setCurrentClass(s.class_name || ''); checkStudentInvoice(s.id); setStudents([]); setSearchQuery(''); }} className="px-4 py-3 border-b hover:bg-blue-50 cursor-pointer flex justify-between items-center">
+                    <div><div className="font-medium">{s.first_name} {s.last_name}</div><div className="text-sm text-gray-500">{s.admission_no}</div></div>
+                    <ChevronRight className="text-gray-400" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         
-        <div className="mt-8 pt-6 border-t border-gray-300 text-center text-gray-600 text-sm">
-          <p>Bethel Junior Campus Fee Management System • {new Date().getFullYear()}</p>
+        {/* Selected Student Info & Payment Form */}
+        {selectedStudent && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center"><User className="h-6 w-6 text-blue-600" /></div>
+                <div><h3 className="text-xl font-bold">{selectedStudent.first_name} {selectedStudent.last_name}</h3><p className="text-gray-500">{selectedStudent.admission_no}</p></div>
+              </div>
+              <button onClick={resetForm} className="text-sm text-red-600 hover:text-red-800">Change Student</button>
+            </div>
+            
+            {/* Balance Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+              <div><p className="text-sm text-gray-500">Current Balance</p><p className={`text-2xl font-bold ${getCurrentBalance() < 0 ? 'text-green-600' : getCurrentBalance() > 0 ? 'text-red-600' : 'text-gray-600'}`}>{formatCurrency(getCurrentBalance())}</p></div>
+              <div><p className="text-sm text-gray-500">Credit Balance</p><p className="text-2xl font-bold text-green-600">{formatCurrency(creditBalance)}</p></div>
+              <div><p className="text-sm text-gray-500">Status</p><span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getCurrentBalance() < 0 ? 'bg-green-100 text-green-800' : getCurrentBalance() > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>{getCurrentBalance() < 0 ? 'CREDIT' : getCurrentBalance() > 0 ? 'OUTSTANDING' : 'PAID'}</span></div>
+            </div>
+            
+            {/* Payment Form */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-4">
+                <div><label className="block text-sm font-medium mb-1">Amount (KES) *</label><input type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} min="5" step="0.01" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg" placeholder="Minimum 5.00" /></div>
+                <div><label className="block text-sm font-medium mb-1">Payment Method *</label><select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg"><option value="CASH">Cash</option><option value="MPESA">M-PESA</option><option value="BANK_TRANSFER">Bank Transfer</option><option value="CHEQUE">Cheque</option></select></div>
+                {paymentMethod === 'MPESA' && <div><label className="block text-sm font-medium mb-1">M-PESA Number *</label><input type="text" value={mobileMoneyNo} onChange={e => setMobileMoneyNo(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg" placeholder="07XX XXX XXX" /></div>}
+                {paymentMethod === 'BANK_TRANSFER' && <div><label className="block text-sm font-medium mb-1">Bank Name *</label><input type="text" value={bankName} onChange={e => setBankName(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg" placeholder="Bank name" /></div>}
+                {paymentMethod === 'CHEQUE' && <div><label className="block text-sm font-medium mb-1">Cheque Number *</label><input type="text" value={chequeNo} onChange={e => setChequeNo(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg" placeholder="Cheque number" /></div>}
+                <div><label className="block text-sm font-medium mb-1">Reference (Optional)</label><input type="text" value={paymentReference} onChange={e => setPaymentReference(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg" placeholder="Payment reference" /></div>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold mb-3">Payment Summary</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span>Current Balance:</span><span className={`font-bold ${getCurrentBalance() < 0 ? 'text-green-600' : getCurrentBalance() > 0 ? 'text-red-600' : ''}`}>{formatCurrency(getCurrentBalance())}</span></div>
+                  <div className="flex justify-between"><span>Payment Amount:</span><span className="font-bold text-blue-600">{formatCurrency(paymentAmount)}</span></div>
+                  {getExcessPayment() > 0 && <div className="flex justify-between text-yellow-600"><span>Excess (Credit):</span><span>+{formatCurrency(getExcessPayment())}</span></div>}
+                  <div className="border-t pt-2 mt-2 flex justify-between"><span className="font-bold">New Balance:</span><span className={`font-bold text-lg ${getNewBalance() < 0 ? 'text-green-600' : getNewBalance() > 0 ? 'text-red-600' : ''}`}>{formatCurrency(getNewBalance())}</span></div>
+                </div>
+                <button onClick={processPayment} disabled={!paymentAmount || parseFloat(paymentAmount) < 5} className="w-full mt-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-semibold flex items-center justify-center gap-2"><Calculator size={18} /> Process Payment</button>
+                {getExcessPayment() > 0 && <p className="text-xs text-yellow-600 text-center mt-2">Excess payment will be recorded as student credit</p>}
+              </div>
+            </div>
+            
+            {/* Invoices Section */}
+            {invoices.length > 0 && (
+              <div className="mt-6 border-t pt-4">
+                <h4 className="font-semibold mb-3">Active Invoices</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="px-3 py-2 text-left">Invoice No</th>
+                        <th className="px-3 py-2 text-left">Date</th>
+                        <th className="px-3 py-2 text-left">Due Date</th>
+                        <th className="px-3 py-2 text-right">Total</th>
+                        <th className="px-3 py-2 text-right">Paid</th>
+                        <th className="px-3 py-2 text-right">Balance</th>
+                        <th className="px-3 py-2 text-left">Status</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {invoices.map((inv, idx) => (
+                        <tr key={idx}>
+                          <td className="px-3 py-2 font-mono text-xs">{inv.invoice_no} </td>
+                          <td className="px-3 py-2">{new Date(inv.invoice_date).toLocaleDateString()} </td>
+                          <td className="px-3 py-2">{new Date(inv.due_date).toLocaleDateString()} </td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(inv.total_amount)} </td>
+                          <td className="px-3 py-2 text-right text-green-600">{formatCurrency(inv.amount_paid)} </td>
+                          <td className={`px-3 py-2 text-right font-bold ${
+                            parseFloat(inv.balance_amount) < 0 ? 'text-green-600' :
+                            parseFloat(inv.balance_amount) > 0 ? 'text-red-600' : ''
+                          }`}>{formatCurrency(inv.balance_amount)} </td>
+                          <td className="px-3 py-2">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              inv.payment_status === 'PAID' ? 'bg-green-100 text-green-800' :
+                              inv.payment_status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>{inv.payment_status || inv.status}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Recent Transactions */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Recent Transactions</h3>
+            <button onClick={fetchRecentTransactions} className="text-sm text-blue-600 hover:text-blue-800">
+              <RefreshCw size={14} className="inline mr-1" /> Refresh
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-4 py-2 text-left">Receipt No</th>
+                  <th className="px-4 py-2 text-left">Student</th>
+                  <th className="px-4 py-2 text-right">Amount</th>
+                  <th className="px-4 py-2 text-left">Method</th>
+                  <th className="px-4 py-2 text-left">Date</th>
+                  <th className="px-4 py-2 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {recentTransactions.map(t => (
+                  <tr key={t.id}>
+                    <td className="px-4 py-2 font-mono text-xs">{t.transaction_no} </td>
+                    <td className="px-4 py-2">
+                      <div className="font-medium">{t.first_name} {t.last_name}</div>
+                      <div className="text-xs text-gray-500">{t.admission_no}</div>
+                    </td>
+                    <td className="px-4 py-2 text-right font-bold text-green-600">{formatCurrency(t.amount_kes)} </td>
+                    <td className="px-4 py-2">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        t.payment_mode === 'MPESA' ? 'bg-green-100 text-green-800' :
+                        t.payment_mode === 'CASH' ? 'bg-blue-100 text-blue-800' :
+                        'bg-purple-100 text-purple-800'
+                      }`}>{t.payment_mode}</span>
+                    </td>
+                    <td className="px-4 py-2">{new Date(t.payment_date).toLocaleDateString()} </td>
+                    <td className="px-4 py-2">
+                      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">COMPLETED</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+      
+      {/* Modals */}
+      <StudentSelectionModal isOpen={showStudentModal} onClose={() => setShowStudentModal(false)} students={studentList} onSelect={handleSelectStudent} loading={loading} />
+      <ConfirmationModal isOpen={showConfirmation} onClose={() => setShowConfirmation(false)} onConfirm={confirmPayment} title="Confirm Payment" message={`Confirm payment of ${formatCurrency(paymentAmount)} for ${selectedStudent?.first_name} ${selectedStudent?.last_name}?`} loading={loading} />
+      <ReceiptModal 
+        isOpen={showReceipt} 
+        onClose={handleReceiptClose} 
+        transaction={currentTransaction} 
+        student={selectedStudent} 
+        formatCurrency={formatCurrency}
+        currentClass={currentClass}
+        invoices={invoices}
+      />
     </div>
   );
 };

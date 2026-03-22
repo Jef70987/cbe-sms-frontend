@@ -117,7 +117,7 @@ export const AuthProvider = ({ children }) => {
           throw new Error('Auntentication Error');
         }
         
-        // Ensure user data has required fields
+        // Ensuring user data has required fields
         if (!userData.email) {
           userData.email = email;
         }
@@ -139,13 +139,13 @@ export const AuthProvider = ({ children }) => {
         
       } catch (err) {
         
-        const errorMessage = 'Login failed. Check your network connection and try again.';
+        const errorMessage = `${err}`;
         setError(errorMessage);
         return { success: false, error: errorMessage };
       }
 };
 
-  const logout = () => {  // ✅ Removed async/navigate - call from components
+  const logout = () => { 
     const token = localStorage.getItem('token');
     const refreshToken = localStorage.getItem('refresh_token');
     
@@ -156,11 +156,17 @@ export const AuthProvider = ({ children }) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ refresh_token: refreshToken }),
-    }).catch(console.error);
+    }).catch(error => {
+      if (error){
+        return null;
+      }
+    });
     
-    localStorage.clear();
+    localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('session_id');
     setUser(null);
-    // Navigation handled by caller: const { logout } = useAuth(); logout(); navigate('/login');
   };
 
   const refreshToken = async () => {

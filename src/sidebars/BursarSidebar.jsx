@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import BursarData  from '../SidebarData/BursarSidebarData';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../components/Authentication/AuthContext';
 
 function BursarSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [openDropdown, setOpenDropdown] = useState(null);
   const navigate = useNavigate();
-
+  const { user} = useAuth();
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
@@ -54,8 +55,8 @@ function BursarSidebar() {
       {/* Sidebar */}
       <div 
         className={`
-          h-screen bg-gradient-to-b from-blue-700 to-blue-800 
-          shadow-2xl border-r border-blue-600 transition-all duration-300 ease-in-out z-50
+          h-screen bg-blue-900
+          shadow-2xl border-r border-red-600 transition-all duration-300 ease-in-out z-50
           ${isCollapsed ? 'w-20' : 'w-64'}
           /* Mobile styles */
           fixed lg:relative top-0 left-0
@@ -75,6 +76,7 @@ function BursarSidebar() {
               <div className="flex flex-col">
                 <h1 className="text-white font-bold text-lg leading-tight">JAWABU</h1>
                 <h2 className="text-blue-200 text-xs font-semibold">SCHOOL</h2>
+                <p className="text-sm font-extrabold text-white truncate">{user?.username} | {user?.role}</p>
               </div>
             )}
           </div>

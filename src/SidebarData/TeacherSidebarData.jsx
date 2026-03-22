@@ -57,8 +57,8 @@ const TeacherSidebarData = [
   },
   {
     title: "LogOut",
-    icon: <LogoutIcon sx={{color:'white',fontSize:30}}/>,
-    link: "/Login"
+    icon: <LogoutIcon sx={{color:'red',fontSize:30}}/>,
+    link: "/Logout"
   },
 ];
 

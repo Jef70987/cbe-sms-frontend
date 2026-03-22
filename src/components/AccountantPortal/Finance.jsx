@@ -8,8 +8,7 @@ import ExpenseManagement from "./ExpenseManagement";
 import Report from "./Report";
 import HelpSupport from "./HelpSupport";
 import Settings from "./Settings";
-import Login from "../Authentication/Login";
-
+import Logout from "../Authentication/Logout";
 
 const Accountant = () => {
     return(
@@ -29,7 +28,6 @@ const Accountant = () => {
             }}>
                 <Routes>
                     <Route path="/" element={<Dashboard/>}/>
-                    <Route path="/Login" element={<Login/>}/>
                     <Route path="/Dashboard" element={<Dashboard/>}/>
                     <Route path="/FeeManagement" element={<FeeManagement/>}/>
                     <Route path="/PayrollManagement" element={<PayrollManagement/>}/>
@@ -37,6 +35,9 @@ const Accountant = () => {
                     <Route path="/Reports" element={<Report/>}/>
                     <Route path="/HelpSupport" element={<HelpSupport/>}/>
                     <Route path="/Settings" element={<Settings/>}/>
+                    <Route path="/Logout" element={<Logout/>}/>
+                    
+                    <Route path="*" element={<Logout/>}/>
                 </Routes>
             </div>
                 

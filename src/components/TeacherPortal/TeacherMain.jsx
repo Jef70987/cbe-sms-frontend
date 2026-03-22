@@ -1,7 +1,7 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom"
 import TeacherSidebar from "../../sidebars/TeacherSidebar";
-
+import Logout from "../Authentication/Logout";
 import Login from "../Authentication/Login";
 import TeacherDashboard from "./TeacherDashboard";
 import MarksEntrySheet from "./MarkEntry";
@@ -40,6 +40,7 @@ const Teacher = () => {
                     <Route path="/CompetencyMatrix" element={<CompetencyMatrix/>}/>
                     <Route path="/TermlySummary" element={<TermlySummary/>}/>
                     <Route path="/Analytics" element={<Analytics/>}/>
+                    <Route path="/Logout" element={<Logout/>}/>
                     <Route path="*" element={<TeacherDashboard/>}/>
                 </Routes>
             </div>

@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import StudentSidebarData from '../SidebarData/StudentSidebarData';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../components/Authentication/AuthContext';
 
 function StudentSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const navigate = useNavigate();
+  const { user} = useAuth();
 
   useEffect(() => {
     const handleResize = () => {
@@ -100,7 +102,7 @@ function StudentSidebar() {
       {/* Sidebar */}
       <div 
         className={`
-          h-screen bg-gradient-to-br from-blue-800 to-blue-700
+          h-screen bg-blue-900
           shadow-2xl border-r-0 transition-all duration-500 ease-in-out z-50
           ${isCollapsed ? 'w-20' : 'w-72'}
           /* Mobile styles */
@@ -152,8 +154,9 @@ function StudentSidebar() {
               
               {!isCollapsed && (
                 <div className="flex flex-col">
-                  <h1 className="text-white font-black text-2xl drop-shadow-lg">Jawabu</h1>
-                  <h2 className="text-blue-300 text-xs font-bold tracking-widest drop-shadow-md">school</h2>
+                  <h1 className="text-white font-bold text-lg leading-tight">JAWABU</h1>
+                  <h2 className="text-white text-xs font-semibold">SCHOOL</h2>
+                  <p className="text-sm font-extrabold text-white truncate">{user?.username} | {user?.role}</p>
                 </div>
               )}
             </div>

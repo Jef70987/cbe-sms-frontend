@@ -45,10 +45,10 @@ const FinanceSidebarData = [
   //   icon: <HelpIcon />,
   //   link: "/FinancePortal/HelpSupport"
   // },
-  // {
-  //   title: "LogOut",
-  //   icon: <LogoutIcon sx={{color:'white',fontSize:30}}/>,
-  //   link: "/Login"
-  // },
+  {
+    title: "LogOut",
+    icon: <LogoutIcon sx={{color:'red',fontSize:30}}/>,
+    link: "/Logout"
+  },
 ];
 export default FinanceSidebarData;

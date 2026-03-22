@@ -1,12 +1,14 @@
 import React, { useState ,useEffect} from 'react';
 import TeacherSidebarData from '../SidebarData/TeacherSidebarData';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../components/Authentication/AuthContext';
 
 function TeacherSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const navigate = useNavigate();
+  const { user} = useAuth();
 
   useEffect(() => {
     const handleResize = () => {
@@ -99,7 +101,7 @@ function TeacherSidebar() {
       {/* Sidebar */}
       <div 
         className={`
-          h-screen bg-gradient-to-br from-blue-800 to-blue-700
+          h-screen bg-blue-900
           shadow-2xl border-r-0 transition-all duration-500 ease-in-out z-50
           ${isCollapsed ? 'w-20' : 'w-72'}
           /* Mobile styles */
@@ -130,7 +132,7 @@ function TeacherSidebar() {
           <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-400 to-blue-600"></div>
           
           <div className={`
-            flex items-center p-5 border-b border-red-700 bg-red-800 backdrop-blur-sm
+            flex items-center p-5 border-b bg-blue-900 backdrop-blur-sm
             ${isCollapsed ? 'justify-center' : 'justify-between'}
           `}>
             {/* Logo and Name */}
@@ -151,8 +153,9 @@ function TeacherSidebar() {
               
               {!isCollapsed && (
                 <div className="flex flex-col">
-                  <h1 className="text-white font-black text-2xl drop-shadow-lg">Jawabu</h1>
-                  <h2 className="text-blue-300 text-xs font-bold tracking-widest drop-shadow-md">school</h2>
+                  <h1 className="text-white font-bold text-lg leading-tight">JAWABU</h1>
+                  <h2 className="text-white text-xs font-semibold">SCHOOL</h2>
+                  <p className="text-sm font-extrabold text-white truncate">{user?.username} | {user?.role}</p>
                 </div>
               )}
             </div>

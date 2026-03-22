@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PrincipalSidebarData } from '../SidebarData/PrincipalSidebarData';
+import { useAuth } from '../components/Authentication/AuthContext';
 
 function PrincipalSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false); // Start expanded
   const [openDropdown, setOpenDropdown] = useState(null);
   const navigate = useNavigate();
+  const { user} = useAuth();
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -73,9 +75,9 @@ function PrincipalSidebar() {
             />
             {!isCollapsed && (
               <div className="flex flex-col">
-                <h1 className="text-white font-extrabold text-lg leading-tight">PRINCIPAL</h1>
-                <h2 className="text-blue-200 text-xs font-bold">PORTAL</h2>
-                <p className="text-sm font-extrabold text-white truncate">Dr. John Smith</p>
+                <h1 className="text-white font-bold text-lg leading-tight">JAWABU</h1>
+                <h2 className="text-white text-xs font-semibold">SCHOOL</h2>
+                <p className="text-sm font-extrabold text-white truncate">{user?.username} | {user?.role}</p>
               </div>
             )}
           </div>
