@@ -481,12 +481,12 @@ function Dashboard() {
                   color="bg-green-500 hover:bg-green-600" 
                   onClick={handleNavigate('/RegisterPortal/StudentManagement')} 
                 />
-                {/* <QuickActionButton 
+                <QuickActionButton 
                   icon="file-alt" 
                   label="Reports" 
                   color="bg-amber-500 hover:bg-amber-600" 
                   onClick={handleNavigate('/RegisterPortal/Reports')} 
-                /> */}
+                />
                 <QuickActionButton 
                   icon="school" 
                   label="Class Setup" 
