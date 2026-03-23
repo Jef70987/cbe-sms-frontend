@@ -54,29 +54,31 @@ function TeacherSidebar() {
       )}
 
       {/* Mobile Bottom Navigation - Always visible when on mobile */}
+
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-blue-800 shadow-2xl z-50 lg:hidden">
-          <div className="flex justify-around items-center h-16 px-2 overflow-x-auto">
-            {TeacherSidebarData.slice(0, 15).map((val, key) => (
-              <button
-                key={key}
-                onClick={() => handleNavigation(val.link)}
-                className={`
-                  flex flex-col items-center justify-center px-3 py-1 rounded-xl transition-all duration-300
-                  ${window.location.pathname === val.link 
-                    ? 'text-white scale-110 bg-blue-600' 
-                    : 'text-blue-100 hover:text-white hover:bg-blue-600/50'
-                  }
-                `}
-              >
-                <div className="text-xl mb-1 drop-shadow-lg">{val.icon}</div>
-                <span className="text-xs font-bold whitespace-nowrap drop-shadow-md">{val.title}</span>
-              </button>
-            ))}
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-blue-900 to-blue-800 shadow-lg z-50 lg:hidden">
+          <div className="flex items-center h-12 px-2 overflow-x-auto scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-blue-800">
+            <div className="flex justify-around gap-1">
+              {TeacherSidebarData.slice(0, 15).map((val, key) => (
+                <button
+                  key={key}
+                  onClick={() => handleNavigation(val.link)}
+                  className={`
+                    flex flex-col items-center justify-center px-2 py-1 rounded-lg transition-all duration-300 min-w-[60px]
+                    ${window.location.pathname === val.link 
+                      ? 'text-white bg-blue-600/50' 
+                      : 'text-blue-100 hover:text-white hover:bg-blue-600/30'
+                    }
+                  `}
+                >
+                  <div className="text-base mb-0.5">{val.icon}</div>
+                  <span className="text-[9px] font-semibold whitespace-nowrap">{val.title}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
-
       {/* Main Content Spacer for Mobile - Pushes content up above bottom nav */}
       {isMobile && <div className="pb-20"></div>}
 

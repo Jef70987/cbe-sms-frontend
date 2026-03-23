@@ -40,6 +40,7 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+import { useNavigate } from 'react-router';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -98,6 +99,7 @@ const Dashboard = () => {
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [showSessionExpired, setShowSessionExpired] = useState(false);
+  const navigate = useNavigate();
   
   // Dashboard statistics
   const [dashboardStats, setDashboardStats] = useState({

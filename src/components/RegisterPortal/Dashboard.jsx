@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Chart } from 'chart.js/auto';
 import { useAuth } from '../Authentication/AuthContext';
-
+import { useNavigate } from 'react-router';
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const notificationColors = {
@@ -18,7 +18,7 @@ function Dashboard() {
   const [currentTime, setCurrentTime] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const navigate = useNavigate();
   // Dashboard data state - all real data
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -127,6 +127,10 @@ function Dashboard() {
     hours = hours ? hours : 12;
     const minutes = now.getMinutes().toString().padStart(2, '0');
     setCurrentTime(`${hours}:${minutes} ${ampm}`);
+  };
+
+  const handleNavigate = (path) => {
+    navigate(path);
   };
 
   // Get recent students (last 5 by admission date)
@@ -469,25 +473,25 @@ function Dashboard() {
                   icon="user-plus" 
                   label="New Admission" 
                   color="bg-blue-500 hover:bg-blue-600" 
-                  onClick={() => window.location.href = '/registrar/admission'} 
+                  onClick={handleNavigate('/RegisterPortal/Admission')} 
                 />
                 <QuickActionButton 
                   icon="users" 
                   label="Manage Students" 
                   color="bg-green-500 hover:bg-green-600" 
-                  onClick={() => window.location.href = '/registrar/students'} 
+                  onClick={handleNavigate('/RegisterPortal/StudentManagement')} 
                 />
-                <QuickActionButton 
+                {/* <QuickActionButton 
                   icon="file-alt" 
                   label="Reports" 
                   color="bg-amber-500 hover:bg-amber-600" 
-                  onClick={() => {}} 
-                />
+                  onClick={handleNavigate('/RegisterPortal/Reports')} 
+                /> */}
                 <QuickActionButton 
                   icon="school" 
                   label="Class Setup" 
                   color="bg-purple-500 hover:bg-purple-600" 
-                  onClick={() => window.location.href = '/registrar/classes'} 
+                  onClick={handleNavigate('/RegisterPortal/Class')} 
                 />
               </div>
             </div>

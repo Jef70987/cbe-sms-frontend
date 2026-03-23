@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import  HrData  from '../SidebarData/HrSidebarData';
+import HrData from '../SidebarData/HrSidebarData';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/Authentication/AuthContext';
 
@@ -75,26 +75,28 @@ function HrSidebar({ children }) {
         </div>
       )}
 
-      {/* Mobile Bottom Navigation - Thin */}
+      {/* Mobile Bottom Navigation */}
       {isMobile && (
         <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-blue-900 to-blue-800 shadow-lg z-50 lg:hidden">
-          <div className="flex justify-around items-center h-12 px-2">
-            {HrData.slice(0, 15).map((val, key) => (
-              <button
-                key={key}
-                onClick={() => handleNavigation(val.link)}
-                className={`
-                  flex flex-col items-center justify-center px-2 py-1 rounded-lg transition-all duration-300
-                  ${window.location.pathname === val.link 
-                    ? 'text-white bg-blue-600/50' 
-                    : 'text-blue-100 hover:text-white hover:bg-blue-600/30'
-                  }
-                `}
-              >
-                <div className="text-base mb-0.5">{val.icon}</div>
-                <span className="text-[9px] font-semibold whitespace-nowrap">{val.title}</span>
-              </button>
-            ))}
+          <div className="flex items-center h-12 px-2 overflow-x-auto scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-blue-800">
+            <div className="flex justify-around gap-1">
+              {HrData.slice(0, 15).map((val, key) => (
+                <button
+                  key={key}
+                  onClick={() => handleNavigation(val.link)}
+                  className={`
+                    flex flex-col items-center justify-center px-2 py-1 rounded-lg transition-all duration-300 min-w-[60px]
+                    ${window.location.pathname === val.link 
+                      ? 'text-white bg-blue-600/50' 
+                      : 'text-blue-100 hover:text-white hover:bg-blue-600/30'
+                    }
+                  `}
+                >
+                  <div className="text-base mb-0.5">{val.icon}</div>
+                  <span className="text-[9px] font-semibold whitespace-nowrap">{val.title}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -153,7 +155,7 @@ function HrSidebar({ children }) {
           <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-400 to-blue-600"></div>
           
           <div className={`
-            flex items-center p-5 border-b border-red-700 bg-blue-900 backdrop-blur-sm
+            flex items-center p-5 border-b border-red-700 bg-red-800 backdrop-blur-sm
             ${isCollapsed ? 'justify-center' : 'justify-between'}
           `}>
             <div className={`flex items-center ${isCollapsed ? 'flex-col' : 'space-x-4'}`}>

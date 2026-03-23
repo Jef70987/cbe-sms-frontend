@@ -78,28 +78,25 @@ function DeputyPrincipalSidebar({ children }) {
       {/* Mobile Bottom Navigation - Thin */}
       {isMobile && (
         <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-blue-900 to-blue-800 shadow-lg z-50 lg:hidden">
-          <div className="flex justify-around items-center h-12 px-2">
-            {DeputyPrincipalSidebarData.slice(0, 15).map((val, key) => (
-              <button
-                key={key}
-                onClick={() => handleNavigation(val.path)}
-                className={`
-                  flex flex-col items-center justify-center px-2 py-1 rounded-lg transition-all duration-300
-                  ${window.location.pathname === val.path 
-                    ? 'text-white bg-blue-600/50' 
-                    : 'text-blue-100 hover:text-white hover:bg-blue-600/30'
-                  }
-                `}
-              >
-                <div className="text-base mb-0.5">{val.icon}</div>
-                <span className="text-[9px] font-semibold whitespace-nowrap">{val.title}</span>
-                {val.badge && (
-                  <span className="absolute -top-1 -right-1 px-1 py-0.5 bg-red-500 text-white text-[8px] font-bold rounded-full">
-                    {val.badge}
-                  </span>
-                )}
-              </button>
-            ))}
+          <div className="flex items-center h-12 px-2 overflow-x-auto scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-blue-800">
+            <div className="flex justify-around gap-1">
+              {DeputyPrincipalSidebarData.slice(0, 15).map((val, key) => (
+                <button
+                  key={key}
+                  onClick={() => handleNavigation(val.link)}
+                  className={`
+                    flex flex-col items-center justify-center px-2 py-1 rounded-lg transition-all duration-300 min-w-[60px]
+                    ${window.location.pathname === val.link 
+                      ? 'text-white bg-blue-600/50' 
+                      : 'text-blue-100 hover:text-white hover:bg-blue-600/30'
+                    }
+                  `}
+                >
+                  <div className="text-base mb-0.5">{val.icon}</div>
+                  <span className="text-[9px] font-semibold whitespace-nowrap">{val.title}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

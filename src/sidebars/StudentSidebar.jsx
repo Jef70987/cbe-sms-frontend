@@ -77,15 +77,16 @@ function StudentSidebar({ children }) {
       )}
 
       {/* Mobile Bottom Navigation - Thin */}
-      {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-blue-900 to-blue-800 shadow-lg z-50 lg:hidden">
-          <div className="flex justify-around items-center h-12 px-2">
+    {isMobile && (
+      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-blue-900 to-blue-800 shadow-lg z-50 lg:hidden">
+        <div className="flex items-center h-12 px-2 overflow-x-auto scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-blue-800">
+          <div className="flex justify-around gap-1">
             {StudentSidebarData.slice(0, 15).map((val, key) => (
               <button
                 key={key}
                 onClick={() => handleNavigation(val.link)}
                 className={`
-                  flex flex-col items-center justify-center px-2 py-1 rounded-lg transition-all duration-300
+                  flex flex-col items-center justify-center px-2 py-1 rounded-lg transition-all duration-300 min-w-[60px]
                   ${window.location.pathname === val.link 
                     ? 'text-white bg-blue-600/50' 
                     : 'text-blue-100 hover:text-white hover:bg-blue-600/30'
@@ -98,7 +99,8 @@ function StudentSidebar({ children }) {
             ))}
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* Main Content Area with proper spacing */}
       <div className={isMobile ? "pt-12 pb-12" : ""}>
