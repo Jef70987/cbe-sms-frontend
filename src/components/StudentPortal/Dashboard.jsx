@@ -587,7 +587,7 @@ const StudentDashboard = () => {
           <>
             {/* Student Profile Card - Mobile Optimized */}
             {studentProfile && (
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg p-4 md:p-6 mb-4 md:mb-8 text-white">
+              <div className="bg-blue-400 border border-red-500 rounded-xl shadow-lg p-4 md:p-6 mb-4 md:mb-8 text-white">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-center gap-3 md:gap-4">
                     <div className="h-14 w-14 md:h-20 md:w-20 rounded-full bg-white/20 flex items-center justify-center shrink-0">
@@ -611,7 +611,7 @@ const StudentDashboard = () => {
                     </div>
                   </div>
                   <div className="shrink-0">
-                    <div className="bg-white/20 rounded-lg p-2 md:p-3 text-center">
+                    <div className="rounded-lg p-2 md:p-3 text-center">
                       <p className="text-xs md:text-sm">Academic Status</p>
                       <p className="text-base md:text-xl font-bold">{studentProfile.status || 'Active'}</p>
                     </div>
